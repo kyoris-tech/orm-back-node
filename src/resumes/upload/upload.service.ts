@@ -23,7 +23,6 @@ export class UploadService {
 
   async upload(file: any, user: any) {
     const start = Date.now();
-    const processingMs = Date.now() - start;
 
     if (!file) {
       throw new BadRequestException(
@@ -56,6 +55,8 @@ export class UploadService {
       await this.openaiService.analyseResume(
         extractedText,
       );
+
+    const processingMs = Date.now() - start;
 
     const savedResume =
       await this.prisma.resume.create({
