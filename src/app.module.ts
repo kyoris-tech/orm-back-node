@@ -7,6 +7,8 @@ import { CompanyModule } from './company/company.module';
 import { UserModule } from './user/user.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { ResumesModule } from './resumes/resumes.module';
+import { SelectionProcessModule } from './selection-process/selection-process.module';
+import { JobOpeningModule } from './job-opening/job-opening.module';
 
 @Module({
   imports: [
@@ -15,7 +17,9 @@ import { ResumesModule } from './resumes/resumes.module';
     CompanyModule,
     UserModule,
     AuditLogModule,
-    ResumesModule
+    ResumesModule,
+    SelectionProcessModule,
+    JobOpeningModule
   ],
   controllers: [AppController],
   providers: [AppService],
