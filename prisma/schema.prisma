@@ -57,6 +57,7 @@ model Resume {
   deletedAt DateTime?
 
   selectionProcessEntries SelectionProcessCandidate[]
+  selectedInProcesses     SelectionProcess[] @relation("SelectionProcessSelectedCandidate")
 }
 
 model Role {
@@ -95,6 +96,8 @@ model User {
 enum SelectionProcessStatus {
   OPEN
   CLOSED
+  CANCELLED
+  CONCLUDED
 }
 
 model SelectionProcess {
@@ -110,6 +113,13 @@ model SelectionProcess {
 
   jobOpeningId String?
   jobOpening   JobOpening? @relation(fields: [jobOpeningId], references: [id])
+
+  selectedResumeId String?
+  selectedResume   Resume? @relation("SelectionProcessSelectedCandidate", fields: [selectedResumeId], references: [id])
+
+  closedAt    DateTime?
+  cancelledAt DateTime?
+  concludedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -3,6 +3,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { CompanyService } from "./company.service";
 import { CreateCompanyDto } from "./dto/create-company.dto";
+import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { Roles } from "../auth/decorator/roles.decorator";
 import { updateCompanyStatusDto } from "./dto/update-company-status.dto";
 
@@ -37,5 +38,24 @@ export class CompanyController {
       dto.status,
       req.user
     )
+  }
+
+  @Patch(':id')
+  @Roles('admin')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCompanyDto,
+    @Req() req: any
+  ) {
+    return this.companyService.update(id, dto, req.user);
+  }
+
+  @Post(':id/regenerate-token')
+  @Roles('admin')
+  async regenerateToken(
+    @Param('id') id: string,
+    @Req() req: any
+  ) {
+    return this.companyService.regenerateToken(id, req.user);
   }
 }

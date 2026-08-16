@@ -65,6 +65,51 @@ export class UserService {
     })
   }
 
+  async exportAll() {
+    const users = await this.prismaService.user.findMany({
+      include: {
+        company: true,
+        role: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const statusLogs = await this.prismaService.auditLog.findMany({
+      where: { entityType: 'USER', action: 'UPDATE_STATUS' },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const logsByUser = new Map<string, typeof statusLogs>();
+
+    for (const log of statusLogs) {
+      const existing = logsByUser.get(log.entityId) ?? [];
+      existing.push(log);
+      logsByUser.set(log.entityId, existing);
+    }
+
+    return users.map((user) => {
+      const logs = logsByUser.get(user.id) ?? [];
+      const blockedLog = [...logs].reverse().find((log) => log.newValue === 'BLOCKED');
+      const deletedLog = [...logs].reverse().find((log) => log.newValue === 'DELETED');
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        companyId: user.companyId,
+        companyName: user.company?.name ?? null,
+        role: user.role?.name ?? null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        blockedAt: blockedLog?.createdAt ?? null,
+        blockedBy: blockedLog?.performedByName ?? null,
+        deletedAt: deletedLog?.createdAt ?? null,
+        deletedBy: deletedLog?.performedByName ?? null,
+      };
+    });
+  }
+
   async updateStatus(
     targetUserId: string,
     newStatus: Status,

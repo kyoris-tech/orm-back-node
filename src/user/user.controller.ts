@@ -24,6 +24,12 @@ export class userController {
     return this.userService.listAll();
   }
 
+  @Get('export')
+  @Roles('admin')
+  async exportAll() {
+    return this.userService.exportAll();
+  }
+
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'mod')

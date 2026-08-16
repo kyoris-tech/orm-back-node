@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateCompanyDto } from "./dto/create-company.dto";
+import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { randomBytes } from "crypto";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { AuthUser } from "../auth/strategies/jwt.strategy";
@@ -38,6 +39,68 @@ export class CompanyService {
     return this.prisma.company.findMany({
       orderBy: { createdAt: 'desc' }
     })
+  }
+
+  async update(
+    companyId: string,
+    dto: UpdateCompanyDto,
+    currentUser: AuthUser,
+  ) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada');
+    }
+
+    const oldName = company.name;
+
+    const updatedCompany = await this.prisma.company.update({
+      where: { id: companyId },
+      data: { name: dto.name },
+    });
+
+    await this.auditLogService.create({
+      entityType: 'COMPANY',
+      entityId: company.id,
+      action: 'UPDATE_NAME',
+      oldValue: oldName,
+      newValue: dto.name,
+      performedByUserId: currentUser.userId,
+      performedByName: currentUser.email,
+    });
+
+    return updatedCompany;
+  }
+
+  async regenerateToken(companyId: string, currentUser: AuthUser) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada');
+    }
+
+    const apiKey = randomBytes(24).toString('hex');
+
+    const updatedCompany = await this.prisma.company.update({
+      where: { id: companyId },
+      data: { apiKey },
+    });
+
+    await this.auditLogService.create({
+      entityType: 'COMPANY',
+      entityId: company.id,
+      action: 'REGENERATE_TOKEN',
+      oldValue: undefined,
+      newValue: undefined,
+      performedByUserId: currentUser.userId,
+      performedByName: currentUser.email,
+    });
+
+    return updatedCompany;
   }
 
   async updateStatus(
