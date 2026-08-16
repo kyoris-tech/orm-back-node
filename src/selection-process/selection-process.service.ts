@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { PlanLimitsService } from '../plans/plan-limits.service';
 import { CreateSelectionProcessDto } from './dto/create-selection-process.dto';
 import { LinkJobOpeningDto } from './dto/link-job-opening.dto';
 import { AddCandidatesDto } from './dto/add-candidates.dto';
@@ -19,9 +20,12 @@ export class SelectionProcessService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly planLimitsService: PlanLimitsService,
   ) {}
 
   async create(dto: CreateSelectionProcessDto, user: any) {
+    await this.planLimitsService.assertFeatureEnabled(user.companyId, 'selectionProcesses');
+
     const uniqueResumeIds = Array.from(new Set(dto.resumeIds));
 
     const resumes = await this.prisma.resume.findMany({

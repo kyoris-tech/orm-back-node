@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { PlanLimitsService } from '../plans/plan-limits.service';
 import { CreateJobOpeningDto } from './dto/create-job-opening.dto';
 
 const PUBLIC_CODE_LENGTH = 10;
@@ -21,9 +22,12 @@ export class JobOpeningService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly planLimitsService: PlanLimitsService,
   ) {}
 
   async create(dto: CreateJobOpeningDto, user: any) {
+    await this.planLimitsService.assertFeatureEnabled(user.companyId, 'jobOpenings');
+
     const jobOpening = await this.createWithUniquePublicCode(dto, user);
 
     await this.auditLogService.create({

@@ -38,6 +38,7 @@ async function main() {
         name: 'Kyoris Tech',
         email: 'paulo.paiva@kyoristech.com',
         apiKey: 'kyoris-tech-dev-key',
+        plan: { connect: { name: 'Enterprise' } },
       },
     });
   }

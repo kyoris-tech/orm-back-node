@@ -5,12 +5,14 @@ import * as bcrypt from 'bcrypt'
 import { AuthUser } from "../auth/strategies/jwt.strategy";
 import { Status } from "@prisma/client";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { PlanLimitsService } from "../plans/plan-limits.service";
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly planLimitsService: PlanLimitsService,
   ) { }
 
   async create(dto: CreateUserDto, currentUser: AuthUser) {
@@ -35,6 +37,8 @@ export class UserService {
     if (!company) {
       throw new NotFoundException('Empresa não encontrada');
     }
+
+    await this.planLimitsService.assertCanCreateUser(dto.companyId);
 
     const role = await this.prismaService.role.findUnique({
       where: { name: dto.role },

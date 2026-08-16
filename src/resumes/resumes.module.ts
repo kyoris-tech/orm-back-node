@@ -6,9 +6,10 @@ import { UploadService } from './upload/upload.service';
 import { ExtractorService } from './extractor/extractor.service';
 import { OpenaiService } from './openai/openai.service';
 import { ResumePdfService } from './resume-pdf.service';
+import { PlanLimitsModule } from '../plans/plan-limits.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, PlanLimitsModule],
   controllers: [ResumesController],
   providers: [
     ResumesService,

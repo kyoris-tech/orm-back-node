@@ -5,14 +5,20 @@ import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { randomBytes } from "crypto";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { AuthUser } from "../auth/strategies/jwt.strategy";
-import { Status } from "@prisma/client";
+import { Status, Prisma } from "@prisma/client";
+import { PlanLimitsService } from "../plans/plan-limits.service";
 
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
 
 @Injectable()
 export class CompanyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly planLimitsService: PlanLimitsService,
   ) { }
 
   async create(dto: CreateCompanyDto) {
@@ -24,20 +30,44 @@ export class CompanyService {
       throw new BadRequestException('Email já registrado');
     }
 
+    const plan = await this.prisma.plan.findUnique({ where: { id: dto.planId } });
+
+    if (!plan) {
+      throw new NotFoundException('Plano não encontrado');
+    }
+
     const apiKey = randomBytes(24).toString('hex');
 
-    return this.prisma.company.create({
-      data: {
-        name: dto.name,
-        email: dto.email,
-        apiKey,
+    try {
+      return await this.prisma.company.create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          apiKey,
+          cnpj: dto.cnpj,
+          planId: dto.planId,
+          phone: dto.phone,
+          address: dto.address,
+          website: dto.website,
+          segment: dto.segment,
+          contactName: dto.contactName,
+          billingDay: dto.billingDay,
+        },
+        include: { plan: true },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        throw new BadRequestException('CNPJ já cadastrado');
       }
-    })
+
+      throw error;
+    }
   }
 
   async listAll() {
     return this.prisma.company.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: { plan: true },
     })
   }
 
@@ -48,28 +78,98 @@ export class CompanyService {
   ) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
+      include: { plan: true },
     });
 
     if (!company) {
       throw new NotFoundException('Empresa não encontrada');
     }
 
-    const oldName = company.name;
+    let newPlan = company.plan;
 
-    const updatedCompany = await this.prisma.company.update({
-      where: { id: companyId },
-      data: { name: dto.name },
-    });
+    if (dto.planId && dto.planId !== company.planId) {
+      const plan = await this.prisma.plan.findUnique({ where: { id: dto.planId } });
 
-    await this.auditLogService.create({
-      entityType: 'COMPANY',
-      entityId: company.id,
-      action: 'UPDATE_NAME',
-      oldValue: oldName,
-      newValue: dto.name,
-      performedByUserId: currentUser.userId,
-      performedByName: currentUser.email,
-    });
+      if (!plan) {
+        throw new NotFoundException('Plano não encontrado');
+      }
+
+      newPlan = plan;
+    }
+
+    const data: Record<string, unknown> = { name: dto.name };
+    if (dto.planId !== undefined) data.planId = dto.planId;
+    if (dto.cnpj !== undefined) data.cnpj = dto.cnpj;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address !== undefined) data.address = dto.address;
+    if (dto.website !== undefined) data.website = dto.website;
+    if (dto.segment !== undefined) data.segment = dto.segment;
+    if (dto.contactName !== undefined) data.contactName = dto.contactName;
+    if (dto.billingDay !== undefined) data.billingDay = dto.billingDay;
+
+    let updatedCompany;
+
+    try {
+      updatedCompany = await this.prisma.company.update({
+        where: { id: companyId },
+        data,
+        include: { plan: true },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        throw new BadRequestException('CNPJ já cadastrado');
+      }
+
+      throw error;
+    }
+
+    if (dto.name !== company.name) {
+      await this.auditLogService.create({
+        entityType: 'COMPANY',
+        entityId: company.id,
+        action: 'UPDATE_NAME',
+        oldValue: company.name,
+        newValue: dto.name,
+        performedByUserId: currentUser.userId,
+        performedByName: currentUser.email,
+      });
+    }
+
+    if (newPlan.id !== company.plan.id) {
+      await this.auditLogService.create({
+        entityType: 'COMPANY',
+        entityId: company.id,
+        action: 'UPDATE_PLAN',
+        oldValue: company.plan.name,
+        newValue: newPlan.name,
+        performedByUserId: currentUser.userId,
+        performedByName: currentUser.email,
+      });
+    }
+
+    const detailFields: Array<[keyof UpdateCompanyDto, string]> = [
+      ['cnpj', company.cnpj ?? ''],
+      ['phone', company.phone ?? ''],
+      ['address', company.address ?? ''],
+      ['website', company.website ?? ''],
+      ['segment', company.segment ?? ''],
+      ['contactName', company.contactName ?? ''],
+      ['billingDay', company.billingDay?.toString() ?? ''],
+    ];
+
+    const changedDetails = detailFields.filter(([field, oldValue]) => dto[field] !== undefined && String(dto[field]) !== oldValue);
+
+    if (changedDetails.length > 0) {
+      await this.auditLogService.create({
+        entityType: 'COMPANY',
+        entityId: company.id,
+        action: 'UPDATE_DETAILS',
+        oldValue: JSON.stringify(Object.fromEntries(changedDetails.map(([field, oldValue]) => [field, oldValue]))),
+        newValue: JSON.stringify(Object.fromEntries(changedDetails.map(([field]) => [field, dto[field]]))),
+        performedByUserId: currentUser.userId,
+        performedByName: currentUser.email,
+      });
+    }
 
     return updatedCompany;
   }
@@ -155,5 +255,44 @@ export class CompanyService {
     })
 
     return updateCompany;
+  }
+
+  async getPlanUsage(companyId: string) {
+    return this.planLimitsService.getUsage(companyId);
+  }
+
+  async updatePlan(companyId: string, newPlanId: string, currentUser: AuthUser) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      include: { plan: true },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada');
+    }
+
+    const newPlan = await this.prisma.plan.findUnique({ where: { id: newPlanId } });
+
+    if (!newPlan) {
+      throw new NotFoundException('Plano não encontrado');
+    }
+
+    const updatedCompany = await this.prisma.company.update({
+      where: { id: companyId },
+      data: { planId: newPlanId },
+      include: { plan: true },
+    });
+
+    await this.auditLogService.create({
+      entityType: 'COMPANY',
+      entityId: company.id,
+      action: 'UPDATE_PLAN',
+      oldValue: company.plan.name,
+      newValue: newPlan.name,
+      performedByUserId: currentUser.userId,
+      performedByName: currentUser.email,
+    });
+
+    return updatedCompany;
   }
 }

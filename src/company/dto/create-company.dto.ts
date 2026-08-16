@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, MinLength } from "class-validator";
 
 
 export class CreateCompanyDto {
@@ -8,4 +8,38 @@ export class CreateCompanyDto {
 
   @IsEmail()
   email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  cnpj!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  planId!: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  segment?: string;
+
+  @IsOptional()
+  @IsString()
+  contactName?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  billingDay?: number;
 }

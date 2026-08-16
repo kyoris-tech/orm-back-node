@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExtractorService } from '../extractor/extractor.service';
 import { OpenaiService } from '../openai/openai.service';
+import { PlanLimitsService } from '../../plans/plan-limits.service';
 import { randomUUID } from 'crypto';
 import { bulkJobs, scheduleBulkJobCleanup } from '../bulk/bulk-jobs';
 
@@ -20,6 +21,7 @@ export class UploadService {
     private readonly prisma: PrismaService,
     private readonly extractorService: ExtractorService,
     private readonly openaiService: OpenaiService,
+    private readonly planLimitsService: PlanLimitsService,
   ) { }
 
   async upload(file: any, user: any) {
@@ -42,6 +44,8 @@ export class UploadService {
         'Formato não suportado. Envie PDF ou DOCX.',
       );
     }
+
+    await this.planLimitsService.assertCanProcessResume(user.companyId);
 
     const extractedText =
       await this.extractorService.extractText(

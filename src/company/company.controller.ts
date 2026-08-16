@@ -6,6 +6,7 @@ import { CreateCompanyDto } from "./dto/create-company.dto";
 import { UpdateCompanyDto } from "./dto/update-company.dto";
 import { Roles } from "../auth/decorator/roles.decorator";
 import { updateCompanyStatusDto } from "./dto/update-company-status.dto";
+import { UpdateCompanyPlanDto } from "./dto/update-company-plan.dto";
 
 
 @Controller('api/v1/companies')
@@ -23,6 +24,21 @@ export class CompanyController {
   @Roles('admin')
   async listAll() {
     return this.companyService.listAll();
+  }
+
+  @Get('me/plan')
+  async getMyPlan(@Req() req: any) {
+    return this.companyService.getPlanUsage(req.user.companyId);
+  }
+
+  @Patch(':id/plan')
+  @Roles('admin')
+  async updatePlan(
+    @Param('id') id: string,
+    @Body() dto: UpdateCompanyPlanDto,
+    @Req() req: any
+  ) {
+    return this.companyService.updatePlan(id, dto.planId, req.user);
   }
 
   @Patch(':id/status')

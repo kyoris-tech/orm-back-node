@@ -20,13 +20,37 @@ enum Status {
   DELETED
 }
 
+model Plan {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  maxUsers           Int?
+  maxResumesPerMonth Int?
+  features           String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies Company[]
+}
+
 model Company {
   id     String @id @default(uuid())
   name   String
   email  String @unique
   apiKey String @unique
 
+  cnpj        String? @unique
+  phone       String?
+  address     String?
+  website     String?
+  segment     String?
+  contactName String?
+  billingDay  Int?
+
   status Status @default(ACTIVE)
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
