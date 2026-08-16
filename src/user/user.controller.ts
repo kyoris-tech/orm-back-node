@@ -14,8 +14,8 @@ export class userController {
 
   @Post()
   @Roles('admin')
-  async create(@Body() dto: CreateUserDto) {
-    return this.userService.create(dto)
+  async create(@Body() dto: CreateUserDto, @Req() req: any) {
+    return this.userService.create(dto, req.user)
   }
 
   @Get()

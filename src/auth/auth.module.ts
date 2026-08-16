@@ -5,13 +5,14 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RolesGuard } from "./guards/roles.guard";
+import { getJwtSecret } from "../config/jwt";
 
 
 @Module({
   imports: [
     PrismaModule,
     JwtModule.register({
-      secret: process.env.JWT_SERCRET || 'orm-dev-secret',
+      secret: getJwtSecret(),
       signOptions: { expiresIn: '1h' },
     })
   ],

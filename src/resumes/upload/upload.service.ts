@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ExtractorService } from '../extractor/extractor.service';
 import { OpenaiService } from '../openai/openai.service';
 import { randomUUID } from 'crypto';
-import { bulkJobs } from '../bulk/bulk-jobs';
+import { bulkJobs, scheduleBulkJobCleanup } from '../bulk/bulk-jobs';
 
 @Injectable()
 export class UploadService {
@@ -136,6 +137,8 @@ export class UploadService {
     const jobId = randomUUID();
 
     bulkJobs[jobId] = {
+      ownerId: user.userId,
+      companyId: user.companyId,
       total: files.length,
       processed: 0,
       processing: files.length,
@@ -186,9 +189,11 @@ export class UploadService {
     this.logger.log(
       `Bulk upload finalizado | Job=${jobId}`,
     );
+
+    scheduleBulkJobCleanup(jobId);
   }
 
-  getBulkStatus(jobId: string) {
+  getBulkStatus(jobId: string, user: any) {
     const job = bulkJobs[jobId];
 
     if (!job) {
@@ -197,6 +202,14 @@ export class UploadService {
       );
     }
 
-    return job;
+    if (job.companyId !== user.companyId || job.ownerId !== user.userId) {
+      throw new ForbiddenException(
+        'Sem permissão para acessar este job',
+      );
+    }
+
+    const { ownerId, companyId, ...status } = job;
+
+    return status;
   }
 }

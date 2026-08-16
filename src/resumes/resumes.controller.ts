@@ -74,9 +74,11 @@ export class ResumesController {
   @Get('upload/bulk/status/:jobId')
   getBulkStatus(
     @Param('jobId') jobId: string,
+    @Req() req,
   ) {
     return this.uploadService.getBulkStatus(
       jobId,
+      req.user,
     );
   }
 

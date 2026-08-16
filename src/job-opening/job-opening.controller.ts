@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JobOpeningService } from './job-opening.service';
 import { CreateJobOpeningDto } from './dto/create-job-opening.dto';
@@ -21,5 +21,10 @@ export class JobOpeningController {
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req) {
     return this.jobOpeningService.findOne(id, req.user);
+  }
+
+  @Patch(':id/cancel')
+  async cancel(@Param('id') id: string, @Req() req) {
+    return this.jobOpeningService.cancel(id, req.user);
   }
 }

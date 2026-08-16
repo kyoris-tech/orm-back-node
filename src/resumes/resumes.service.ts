@@ -8,6 +8,17 @@ import { CreateResumeDto } from './dto/create-resume.dto';
 import { ListResumeDto } from './dto/list-resume.dto';
 import { SearchResumeDto } from './dto/search-resume.dto';
 
+const MAX_PAGE_SIZE = 2000;
+const DEFAULT_PAGE_SIZE = 10;
+
+function parsePagination(rawPage?: string | number, rawPageSize?: string | number) {
+  const page = Math.max(1, Math.trunc(Number(rawPage)) || 1);
+  const requestedPageSize = Math.trunc(Number(rawPageSize)) || DEFAULT_PAGE_SIZE;
+  const pageSize = Math.min(Math.max(1, requestedPageSize), MAX_PAGE_SIZE);
+
+  return { page, pageSize, skip: (page - 1) * pageSize };
+}
+
 @Injectable()
 export class ResumesService {
   constructor(
@@ -27,9 +38,7 @@ export class ResumesService {
   async findAll(user: any, query: ListResumeDto) {
     const isAdmin = user.role?.name === 'admin';
 
-    const page = Number(query.page || 1);
-    const pageSize = Number(query.pageSize || 10);
-    const skip = (page - 1) * pageSize;
+    const { page, pageSize, skip } = parsePagination(query.page, query.pageSize);
 
     const where: any = {
       deletedAt: null,
@@ -373,10 +382,7 @@ export class ResumesService {
       user.role === 'admin' ||
       user.role?.name === 'admin';
 
-    const page = Number(query.page || 1);
-    const pageSize = Number(query.pageSize || 10);
-
-    const skip = (page - 1) * pageSize;
+    const { page, pageSize, skip } = parsePagination(query.page, query.pageSize);
 
     const where: any = {
       deletedAt: null,

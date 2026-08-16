@@ -1,4 +1,4 @@
-import { IsOptional } from 'class-validator';
+import { IsNumberString, IsOptional } from 'class-validator';
 
 export class SearchResumeDto {
   @IsOptional()
@@ -23,8 +23,10 @@ export class SearchResumeDto {
   confidenceMin?: string;
 
   @IsOptional()
+  @IsNumberString()
   page?: string;
 
   @IsOptional()
+  @IsNumberString()
   pageSize?: string;
 }

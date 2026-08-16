@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateSelectionProcessDto } from './dto/create-selection-process.dto';
 import { LinkJobOpeningDto } from './dto/link-job-opening.dto';
 import { AddCandidatesDto } from './dto/add-candidates.dto';
@@ -15,7 +16,10 @@ const summaryInclude = {
 
 @Injectable()
 export class SelectionProcessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) {}
 
   async create(dto: CreateSelectionProcessDto, user: any) {
     const uniqueResumeIds = Array.from(new Set(dto.resumeIds));
@@ -39,7 +43,7 @@ export class SelectionProcessService {
       await this.assertJobOpeningBelongsToCompany(dto.jobOpeningId, user.companyId);
     }
 
-    return this.prisma.selectionProcess.create({
+    const process = await this.prisma.selectionProcess.create({
       data: {
         name: dto.name,
         companyId: user.companyId,
@@ -51,6 +55,17 @@ export class SelectionProcessService {
       },
       include: summaryInclude,
     });
+
+    await this.auditLogService.create({
+      entityType: 'SELECTION_PROCESS',
+      entityId: process.id,
+      action: 'CREATE',
+      newValue: process.name,
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
+
+    return process;
   }
 
   async findAll(user: any) {
@@ -101,7 +116,17 @@ export class SelectionProcessService {
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
 
-    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId);
+    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId, user);
+
+    await this.auditLogService.create({
+      entityType: 'SELECTION_PROCESS',
+      entityId: process.id,
+      action: 'CANCEL',
+      oldValue: process.status,
+      newValue: 'CANCELLED',
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
 
     return this.getSummary(id);
   }
@@ -124,7 +149,17 @@ export class SelectionProcessService {
       data: { status: 'CLOSED', closedAt: new Date() },
     });
 
-    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId);
+    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId, user);
+
+    await this.auditLogService.create({
+      entityType: 'SELECTION_PROCESS',
+      entityId: process.id,
+      action: 'CLOSE',
+      oldValue: process.status,
+      newValue: 'CLOSED',
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
 
     return this.getSummary(id);
   }
@@ -154,7 +189,17 @@ export class SelectionProcessService {
       data: { status: 'CONCLUDED', selectedResumeId: dto.resumeId, concludedAt: new Date() },
     });
 
-    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId);
+    await this.closeLinkedJobOpeningIfNoOpenProcesses(process.jobOpeningId, user);
+
+    await this.auditLogService.create({
+      entityType: 'SELECTION_PROCESS',
+      entityId: process.id,
+      action: 'CONCLUDE',
+      oldValue: process.status,
+      newValue: 'CONCLUDED',
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
 
     return this.getSummary(id);
   }
@@ -239,7 +284,7 @@ export class SelectionProcessService {
     });
   }
 
-  private async closeLinkedJobOpeningIfNoOpenProcesses(jobOpeningId: string | null) {
+  private async closeLinkedJobOpeningIfNoOpenProcesses(jobOpeningId: string | null, user: any) {
     if (!jobOpeningId) {
       return;
     }
@@ -249,7 +294,7 @@ export class SelectionProcessService {
       select: { status: true },
     });
 
-    if (!jobOpening || jobOpening.status === 'CLOSED') {
+    if (!jobOpening || jobOpening.status !== 'OPEN') {
       return;
     }
 
@@ -261,6 +306,16 @@ export class SelectionProcessService {
       await this.prisma.jobOpening.update({
         where: { id: jobOpeningId },
         data: { status: 'CLOSED' },
+      });
+
+      await this.auditLogService.create({
+        entityType: 'JOB_OPENING',
+        entityId: jobOpeningId,
+        action: 'AUTO_CLOSE',
+        oldValue: 'OPEN',
+        newValue: 'CLOSED',
+        performedByUserId: user.userId,
+        performedByName: `${user.email} (sem processos seletivos em aberto)`,
       });
     }
   }

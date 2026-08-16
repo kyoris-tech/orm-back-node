@@ -13,7 +13,13 @@ export class UserService {
     private readonly auditLogService: AuditLogService,
   ) { }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, currentUser: AuthUser) {
+    if (dto.role === 'admin' && dto.companyId !== currentUser.companyId) {
+      throw new ForbiddenException(
+        'Só é possível criar administradores dentro da própria empresa administradora',
+      );
+    }
+
     const existingUser = await this.prismaService.user.findUnique({
       where: { email: dto.email }
     })

@@ -143,6 +143,7 @@ enum ContractType {
 enum JobOpeningStatus {
   OPEN
   CLOSED
+  CANCELLED
 }
 
 model JobOpening {
@@ -160,6 +161,8 @@ model JobOpening {
 
   createdById String?
   createdBy   User?   @relation("JobOpeningCreatedBy", fields: [createdById], references: [id])
+
+  cancelledAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
