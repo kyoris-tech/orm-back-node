@@ -17,5 +17,6 @@ import { ResumePdfService } from './resume-pdf.service';
     OpenaiService,
     ResumePdfService
   ],
+  exports: [UploadService],
 })
 export class ResumesModule {}

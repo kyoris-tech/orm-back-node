@@ -156,6 +156,8 @@ model JobOpening {
   differentials String[]
   status        JobOpeningStatus @default(OPEN)
 
+  publicCode String @unique
+
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 

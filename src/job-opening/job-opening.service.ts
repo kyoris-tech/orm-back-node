@@ -1,7 +1,20 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateJobOpeningDto } from './dto/create-job-opening.dto';
+
+const PUBLIC_CODE_LENGTH = 10;
+const MAX_PUBLIC_CODE_ATTEMPTS = 5;
+
+function generatePublicCode(): string {
+  return randomBytes(8).toString('base64url').slice(0, PUBLIC_CODE_LENGTH);
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
 
 @Injectable()
 export class JobOpeningService {
@@ -11,18 +24,7 @@ export class JobOpeningService {
   ) {}
 
   async create(dto: CreateJobOpeningDto, user: any) {
-    const jobOpening = await this.prisma.jobOpening.create({
-      data: {
-        title: dto.title,
-        workModel: dto.workModel,
-        contractType: dto.contractType,
-        salaryRange: dto.salaryRange,
-        requirements: dto.requirements ?? [],
-        differentials: dto.differentials ?? [],
-        companyId: user.companyId,
-        createdById: user.userId,
-      },
-    });
+    const jobOpening = await this.createWithUniquePublicCode(dto, user);
 
     await this.auditLogService.create({
       entityType: 'JOB_OPENING',
@@ -64,6 +66,49 @@ export class JobOpeningService {
     }
 
     return jobOpening;
+  }
+
+  async findAllPublicOpen() {
+    const jobOpenings = await this.prisma.jobOpening.findMany({
+      where: { status: 'OPEN', company: { status: 'ACTIVE' } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        publicCode: true,
+        title: true,
+        workModel: true,
+        contractType: true,
+        salaryRange: true,
+        createdAt: true,
+        company: { select: { name: true } },
+      },
+    });
+
+    return jobOpenings.map(({ company, ...rest }) => ({ ...rest, companyName: company.name }));
+  }
+
+  async findPublicByCode(code: string) {
+    const jobOpening = await this.prisma.jobOpening.findUnique({
+      where: { publicCode: code },
+      select: {
+        title: true,
+        workModel: true,
+        contractType: true,
+        salaryRange: true,
+        requirements: true,
+        differentials: true,
+        status: true,
+        createdAt: true,
+        company: { select: { name: true } },
+      },
+    });
+
+    if (!jobOpening) {
+      throw new NotFoundException('Vaga não encontrada');
+    }
+
+    const { company, ...rest } = jobOpening;
+
+    return { ...rest, companyName: company.name };
   }
 
   async cancel(id: string, user: any) {
@@ -120,5 +165,48 @@ export class JobOpeningService {
     }
 
     return this.findOne(id, user);
+  }
+
+  async getCompanyIdForOpenPublicCode(code: string) {
+    const jobOpening = await this.prisma.jobOpening.findUnique({
+      where: { publicCode: code },
+      select: { companyId: true, status: true, company: { select: { status: true } } },
+    });
+
+    if (!jobOpening) {
+      throw new NotFoundException('Vaga não encontrada');
+    }
+
+    if (jobOpening.status !== 'OPEN' || jobOpening.company.status !== 'ACTIVE') {
+      throw new BadRequestException('Esta vaga não está mais recebendo candidaturas');
+    }
+
+    return jobOpening.companyId;
+  }
+
+  private async createWithUniquePublicCode(dto: CreateJobOpeningDto, user: any) {
+    for (let attempt = 1; attempt <= MAX_PUBLIC_CODE_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.jobOpening.create({
+          data: {
+            title: dto.title,
+            workModel: dto.workModel,
+            contractType: dto.contractType,
+            salaryRange: dto.salaryRange,
+            requirements: dto.requirements ?? [],
+            differentials: dto.differentials ?? [],
+            companyId: user.companyId,
+            createdById: user.userId,
+            publicCode: generatePublicCode(),
+          },
+        });
+      } catch (error) {
+        if (!isUniqueConstraintViolation(error) || attempt === MAX_PUBLIC_CODE_ATTEMPTS) {
+          throw error;
+        }
+      }
+    }
+
+    throw new ConflictException('Não foi possível gerar um código público único para a vaga');
   }
 }
