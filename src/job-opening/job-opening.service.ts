@@ -82,6 +82,7 @@ export class JobOpeningService {
         workModel: true,
         contractType: true,
         salaryRange: true,
+        requirements: true,
         createdAt: true,
         company: { select: { name: true } },
       },
