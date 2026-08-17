@@ -188,6 +188,46 @@ export class UserService {
     return updatedUser;
   }
 
+  async updatePassword(
+    targetUserId: string,
+    newPassword: string,
+    currentUser: AuthUser,
+  ) {
+    const targetUser = await this.prismaService.user.findUnique({
+      where: {
+        id: targetUserId,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException(
+        'Usuário não encontrado',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prismaService.user.update({
+      where: {
+        id: targetUserId,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    await this.auditLogService.create({
+      entityType: 'USER',
+      entityId: targetUser.id,
+      action: 'UPDATE_PASSWORD',
+      newValue: 'Senha redefinida pelo administrador',
+      performedByUserId: currentUser.userId,
+      performedByName: currentUser.email,
+    });
+
+    return { id: targetUser.id, name: targetUser.name, email: targetUser.email };
+  }
+
   async getProfile(userId: string) {
     const user =
       await this.prismaService.user.findUnique({

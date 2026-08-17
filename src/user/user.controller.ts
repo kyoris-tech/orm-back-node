@@ -5,6 +5,7 @@ import { UserService } from "./user.service";
 import { Roles } from "../auth/decorator/roles.decorator";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
+import { UpdateUserPasswordDto } from "./dto/update-user-password.dto";
 
 
 @Controller('api/v1/users')
@@ -41,6 +42,20 @@ export class userController {
     return this.userService.updateStatus(
       id,
       dto.status,
+      req.user
+    )
+  }
+
+  @Patch(':id/password')
+  @Roles('admin')
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserPasswordDto,
+    @Req() req: any,
+  ) {
+    return this.userService.updatePassword(
+      id,
+      dto.password,
       req.user
     )
   }
