@@ -1,7 +1,7 @@
 import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ContractType, WorkModel } from '@prisma/client';
 
-export class CreateJobOpeningDto {
+export class UpdateJobOpeningDto {
   @IsString()
   @IsNotEmpty()
   title: string;

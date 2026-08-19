@@ -178,6 +178,7 @@ model JobOpening {
   salaryRange   String?
   requirements  String[]
   differentials String[]
+  benefits      String[]
   status        JobOpeningStatus @default(OPEN)
 
   publicCode String @unique
@@ -204,6 +205,8 @@ model SelectionProcessCandidate {
 
   resumeId String
   resume   Resume @relation(fields: [resumeId], references: [id])
+
+  matchScore Int?
 
   addedAt DateTime @default(now())
 

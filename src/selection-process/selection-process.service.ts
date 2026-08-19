@@ -6,6 +6,7 @@ import { CreateSelectionProcessDto } from './dto/create-selection-process.dto';
 import { LinkJobOpeningDto } from './dto/link-job-opening.dto';
 import { AddCandidatesDto } from './dto/add-candidates.dto';
 import { ConcludeSelectionProcessDto } from './dto/conclude-selection-process.dto';
+import { LinkCandidateToJobOpeningDto } from './dto/link-candidate-to-job-opening.dto';
 
 const jobOpeningSelect = { id: true, title: true, status: true };
 const selectedResumeSelect = { id: true, fullName: true, dataJson: true };
@@ -34,7 +35,7 @@ export class SelectionProcessService {
         companyId: user.companyId,
         deletedAt: null,
       },
-      select: { id: true },
+      select: { id: true, dataJson: true },
     });
 
     if (resumes.length === 0) {
@@ -43,9 +44,9 @@ export class SelectionProcessService {
       );
     }
 
-    if (dto.jobOpeningId) {
-      await this.assertJobOpeningBelongsToCompany(dto.jobOpeningId, user.companyId);
-    }
+    const jobOpening = dto.jobOpeningId
+      ? await this.assertJobOpeningBelongsToCompany(dto.jobOpeningId, user.companyId)
+      : null;
 
     const process = await this.prisma.selectionProcess.create({
       data: {
@@ -54,7 +55,10 @@ export class SelectionProcessService {
         createdById: user.userId,
         jobOpeningId: dto.jobOpeningId,
         candidates: {
-          create: resumes.map((resume) => ({ resumeId: resume.id })),
+          create: resumes.map((resume) => ({
+            resumeId: resume.id,
+            matchScore: jobOpening ? this.calculateJobMatchScore(resume, jobOpening) : null,
+          })),
         },
       },
       include: summaryInclude,
@@ -229,6 +233,7 @@ export class SelectionProcessService {
   async addCandidates(id: string, dto: AddCandidatesDto, user: any) {
     const process = await this.prisma.selectionProcess.findFirst({
       where: { id, companyId: user.companyId },
+      include: { jobOpening: { select: { requirements: true, differentials: true } } },
     });
 
     if (!process) {
@@ -249,7 +254,7 @@ export class SelectionProcessService {
         companyId: user.companyId,
         deletedAt: null,
       },
-      select: { id: true },
+      select: { id: true, dataJson: true },
     });
 
     if (resumes.length === 0) {
@@ -274,11 +279,81 @@ export class SelectionProcessService {
         data: resumesToAdd.map((resume) => ({
           selectionProcessId: id,
           resumeId: resume.id,
+          matchScore: process.jobOpening ? this.calculateJobMatchScore(resume, process.jobOpening) : null,
         })),
       });
     }
 
     return this.findOne(id, user);
+  }
+
+  async attachPublicApplication(
+    jobOpening: { id: string; title: string; requirements: string[]; differentials: string[]; companyId: string },
+    resume: { id: string; dataJson: any },
+  ) {
+    let process = await this.prisma.selectionProcess.findFirst({
+      where: { jobOpeningId: jobOpening.id, status: 'OPEN' },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!process) {
+      process = await this.prisma.selectionProcess.create({
+        data: {
+          name: `Candidaturas — ${jobOpening.title}`,
+          companyId: jobOpening.companyId,
+          jobOpeningId: jobOpening.id,
+        },
+      });
+    }
+
+    await this.prisma.selectionProcessCandidate.upsert({
+      where: { selectionProcessId_resumeId: { selectionProcessId: process.id, resumeId: resume.id } },
+      create: {
+        selectionProcessId: process.id,
+        resumeId: resume.id,
+        matchScore: this.calculateJobMatchScore(resume, jobOpening),
+      },
+      update: {},
+    });
+
+    return process;
+  }
+
+  async linkCandidateToJobOpening(dto: LinkCandidateToJobOpeningDto, user: any) {
+    const resume = await this.prisma.resume.findFirst({
+      where: { id: dto.resumeId, companyId: user.companyId, deletedAt: null },
+      select: { id: true, fullName: true, dataJson: true },
+    });
+
+    if (!resume) {
+      throw new NotFoundException('Currículo não encontrado');
+    }
+
+    const jobOpening = await this.prisma.jobOpening.findFirst({
+      where: { id: dto.jobOpeningId, companyId: user.companyId },
+      select: { id: true, title: true, requirements: true, differentials: true, companyId: true, status: true },
+    });
+
+    if (!jobOpening) {
+      throw new NotFoundException('Vaga não encontrada');
+    }
+
+    if (jobOpening.status !== 'OPEN') {
+      throw new BadRequestException('Esta vaga não está mais em aberto');
+    }
+
+    const process = await this.attachPublicApplication(jobOpening, resume);
+
+    await this.auditLogService.create({
+      entityType: 'SELECTION_PROCESS',
+      entityId: process.id,
+      action: 'ADD_CANDIDATE',
+      newValue: resume.fullName ?? resume.id,
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
+
+    return this.findOne(process.id, user);
   }
 
   private async getSummary(id: string) {
@@ -327,11 +402,62 @@ export class SelectionProcessService {
   private async assertJobOpeningBelongsToCompany(jobOpeningId: string, companyId: string) {
     const jobOpening = await this.prisma.jobOpening.findFirst({
       where: { id: jobOpeningId, companyId },
-      select: { id: true },
+      select: { id: true, requirements: true, differentials: true },
     });
 
     if (!jobOpening) {
       throw new NotFoundException('Vaga não encontrada para esta empresa');
     }
+
+    return jobOpening;
+  }
+
+  private tokenize(text?: string): string[] {
+    if (!text) return [];
+    return text.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  }
+
+  private buildResumeSearchableText(resume: { dataJson: any }): string {
+    const data = resume.dataJson || {};
+
+    const experienceText = (data.experience || [])
+      .map((experience: any) => `${experience.role || ''} ${(experience.description || []).join(' ')}`)
+      .join(' ');
+
+    return `
+      ${(data.skills || []).join(' ')}
+      ${data.role || ''}
+      ${data.summary || ''}
+      ${data.qualifications || ''}
+      ${(data.courses || []).join(' ')}
+      ${experienceText}
+    `.toLowerCase();
+  }
+
+  private calculateJobMatchScore(
+    resume: { dataJson: any },
+    jobOpening: { requirements: string[]; differentials: string[] },
+  ): number | null {
+    const criteria = [...jobOpening.requirements, ...jobOpening.differentials];
+
+    if (criteria.length === 0) {
+      return null;
+    }
+
+    const searchableText = this.buildResumeSearchableText(resume);
+
+    const matchedCriteria = criteria.filter((criterion) => {
+      const tokens = this.tokenize(criterion);
+
+      if (tokens.length === 0) {
+        return false;
+      }
+
+      const hits = tokens.filter((token) => searchableText.includes(token)).length;
+
+      return hits / tokens.length >= 0.5;
+    }).length;
+
+    return Math.round((matchedCriteria / criteria.length) * 100);
   }
 }

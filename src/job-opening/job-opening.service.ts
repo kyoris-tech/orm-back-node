@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { PlanLimitsService } from '../plans/plan-limits.service';
 import { CreateJobOpeningDto } from './dto/create-job-opening.dto';
+import { UpdateJobOpeningDto } from './dto/update-job-opening.dto';
 
 const PUBLIC_CODE_LENGTH = 10;
 const MAX_PUBLIC_CODE_ATTEMPTS = 5;
@@ -101,6 +102,7 @@ export class JobOpeningService {
         salaryRange: true,
         requirements: true,
         differentials: true,
+        benefits: true,
         status: true,
         createdAt: true,
         company: { select: { name: true } },
@@ -114,6 +116,41 @@ export class JobOpeningService {
     const { company, ...rest } = jobOpening;
 
     return { ...rest, companyName: company.name };
+  }
+
+  async update(id: string, dto: UpdateJobOpeningDto, user: any) {
+    const jobOpening = await this.prisma.jobOpening.findFirst({
+      where: { id, companyId: user.companyId },
+    });
+
+    if (!jobOpening) {
+      throw new NotFoundException('Vaga não encontrada');
+    }
+
+    const updated = await this.prisma.jobOpening.update({
+      where: { id },
+      data: {
+        title: dto.title,
+        workModel: dto.workModel,
+        contractType: dto.contractType,
+        salaryRange: dto.salaryRange,
+        requirements: dto.requirements ?? [],
+        differentials: dto.differentials ?? [],
+        benefits: dto.benefits ?? [],
+      },
+    });
+
+    await this.auditLogService.create({
+      entityType: 'JOB_OPENING',
+      entityId: jobOpening.id,
+      action: 'UPDATE',
+      oldValue: jobOpening.title,
+      newValue: updated.title,
+      performedByUserId: user.userId,
+      performedByName: user.email,
+    });
+
+    return this.findOne(id, user);
   }
 
   async cancel(id: string, user: any) {
@@ -172,10 +209,18 @@ export class JobOpeningService {
     return this.findOne(id, user);
   }
 
-  async getCompanyIdForOpenPublicCode(code: string) {
+  async getOpenJobOpeningForApply(code: string) {
     const jobOpening = await this.prisma.jobOpening.findUnique({
       where: { publicCode: code },
-      select: { companyId: true, status: true, company: { select: { status: true } } },
+      select: {
+        id: true,
+        title: true,
+        requirements: true,
+        differentials: true,
+        companyId: true,
+        status: true,
+        company: { select: { status: true } },
+      },
     });
 
     if (!jobOpening) {
@@ -186,7 +231,7 @@ export class JobOpeningService {
       throw new BadRequestException('Esta vaga não está mais recebendo candidaturas');
     }
 
-    return jobOpening.companyId;
+    return jobOpening;
   }
 
   private async createWithUniquePublicCode(dto: CreateJobOpeningDto, user: any) {
@@ -200,6 +245,7 @@ export class JobOpeningService {
             salaryRange: dto.salaryRange,
             requirements: dto.requirements ?? [],
             differentials: dto.differentials ?? [],
+            benefits: dto.benefits ?? [],
             companyId: user.companyId,
             createdById: user.userId,
             publicCode: generatePublicCode(),
