@@ -5,6 +5,7 @@ import { CreateSelectionProcessDto } from './dto/create-selection-process.dto';
 import { LinkJobOpeningDto } from './dto/link-job-opening.dto';
 import { AddCandidatesDto } from './dto/add-candidates.dto';
 import { ConcludeSelectionProcessDto } from './dto/conclude-selection-process.dto';
+import { LinkCandidateToJobOpeningDto } from './dto/link-candidate-to-job-opening.dto';
 
 @Controller('api/v1/selection-processes')
 @UseGuards(JwtAuthGuard)
@@ -49,5 +50,10 @@ export class SelectionProcessController {
   @Post(':id/candidates')
   async addCandidates(@Param('id') id: string, @Body() dto: AddCandidatesDto, @Req() req) {
     return this.selectionProcessService.addCandidates(id, dto, req.user);
+  }
+
+  @Post('link-candidate')
+  async linkCandidateToJobOpening(@Body() dto: LinkCandidateToJobOpeningDto, @Req() req) {
+    return this.selectionProcessService.linkCandidateToJobOpening(dto, req.user);
   }
 }

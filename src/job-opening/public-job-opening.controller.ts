@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { JobOpeningService } from './job-opening.service';
 import { UploadService } from '../resumes/upload/upload.service';
+import { SelectionProcessService } from '../selection-process/selection-process.service';
 import { PublicApplyThrottlerGuard } from './guards/public-apply-throttler.guard';
 
 const APPLY_RATE_LIMIT = 30;
@@ -14,6 +15,7 @@ export class PublicJobOpeningController {
   constructor(
     private readonly jobOpeningService: JobOpeningService,
     private readonly uploadService: UploadService,
+    private readonly selectionProcessService: SelectionProcessService,
   ) {}
 
   @Get()
@@ -31,7 +33,11 @@ export class PublicJobOpeningController {
   @Throttle({ default: { limit: APPLY_RATE_LIMIT, ttl: APPLY_RATE_TTL_MS } })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_SIZE_BYTES } }))
   async apply(@Param('code') code: string, @UploadedFile() file: any) {
-    const companyId = await this.jobOpeningService.getCompanyIdForOpenPublicCode(code);
-    return this.uploadService.upload(file, { companyId });
+    const jobOpening = await this.jobOpeningService.getOpenJobOpeningForApply(code);
+    const result = await this.uploadService.upload(file, { companyId: jobOpening.companyId });
+
+    await this.selectionProcessService.attachPublicApplication(jobOpening, result.resume);
+
+    return result;
   }
 }

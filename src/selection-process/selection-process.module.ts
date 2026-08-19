@@ -9,5 +9,6 @@ import { SelectionProcessService } from './selection-process.service';
   imports: [PrismaModule, AuditLogModule, PlanLimitsModule],
   controllers: [SelectionProcessController],
   providers: [SelectionProcessService],
+  exports: [SelectionProcessService],
 })
 export class SelectionProcessModule {}
