@@ -1,34 +1,35 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { CompanyModule } from './company/company.module';
-import { UserModule } from './user/user.module';
-import { AuditLogModule } from './audit-log/audit-log.module';
-import { ResumesModule } from './resumes/resumes.module';
-import { SelectionProcessModule } from './selection-process/selection-process.module';
-import { JobOpeningModule } from './job-opening/job-opening.module';
+import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CompanyModule } from './modules/companies/company.module';
+import { UserModule } from './modules/users/user.module';
+import { AuditLogModule } from './modules/audit-logs/audit-log.module';
+import { ResumesModule } from './modules/resumes/resumes.module';
+import { SelectionProcessModule } from './modules/selection-processes/selection-process.module';
+import { JobOpeningModule } from './modules/job-openings/job-opening.module';
+import { HealthModule } from './modules/health/health.module';
+
+const THROTTLER_TTL_MS = 60_000;
+const THROTTLER_LIMIT = 5;
 
 @Module({
   imports: [
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000,
-        limit: 5,
+        ttl: THROTTLER_TTL_MS,
+        limit: THROTTLER_LIMIT,
       },
     ]),
     PrismaModule,
+    HealthModule,
     AuthModule,
     CompanyModule,
     UserModule,
     AuditLogModule,
     ResumesModule,
     SelectionProcessModule,
-    JobOpeningModule
+    JobOpeningModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
