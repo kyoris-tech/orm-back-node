@@ -7,9 +7,10 @@ import { ExtractorService } from './extractor/extractor.service';
 import { OpenaiService } from './openai/openai.service';
 import { ResumePdfService } from './resume-pdf.service';
 import { PlanLimitsModule } from '../plans/plan-limits.module';
+import { ExchangeRateModule } from '../exchange-rate/exchange-rate.module';
 
 @Module({
-  imports: [PrismaModule, PlanLimitsModule],
+  imports: [PrismaModule, PlanLimitsModule, ExchangeRateModule],
   controllers: [ResumesController],
   providers: [
     ResumesService,

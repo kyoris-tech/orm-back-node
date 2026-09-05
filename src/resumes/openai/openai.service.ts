@@ -3,6 +3,17 @@ import {
   Logger,
 } from '@nestjs/common';
 import OpenAI from 'openai';
+import { ExchangeRateService } from '../../exchange-rate/exchange-rate.service';
+
+const RESUME_MODEL = process.env.OPENAI_RESUME_MODEL ?? 'gpt-4.1-mini';
+
+const DEFAULT_COST_INPUT_PER_MILLION = 0.4;
+const DEFAULT_COST_OUTPUT_PER_MILLION = 1.6;
+
+function readPositiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 @Injectable()
 export class OpenaiService {
@@ -11,10 +22,19 @@ export class OpenaiService {
   private readonly logger =
     new Logger(OpenaiService.name);
 
-  constructor() {
+  private readonly costInputPerToken: number;
+  private readonly costOutputPerToken: number;
+
+  constructor(private readonly exchangeRateService: ExchangeRateService) {
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+
+    this.costInputPerToken =
+      readPositiveNumber(process.env.COST_INPUT, DEFAULT_COST_INPUT_PER_MILLION) / 1_000_000;
+
+    this.costOutputPerToken =
+      readPositiveNumber(process.env.COST_OUTPUT, DEFAULT_COST_OUTPUT_PER_MILLION) / 1_000_000;
   }
 
   async analyseResume(text: string) {
@@ -114,7 +134,7 @@ export class OpenaiService {
     try {
       const completion =
         await this.client.chat.completions.create({
-          model: 'gpt-4.1-mini',
+          model: RESUME_MODEL,
           response_format: {
             type: 'json_object',
           },
@@ -140,25 +160,12 @@ export class OpenaiService {
       const completionTokens =
         completion.usage?.completion_tokens || 0;
 
-      /**
-       * Ajuste conforme seu modelo/preço real
-       * gpt-4.1-mini (exemplo inicial)
-       */
-      const inputCostPerToken =
-        0.15 / 1_000_000;
-
-      const outputCostPerToken =
-        0.60 / 1_000_000;
-
-      /**
-       * Pode futuramente vir de ENV:
-       * process.env.USD_BRL
-       */
-      const usdToBrl = 5.70;
-
       const costUsd =
-        (promptTokens * inputCostPerToken) +
-        (completionTokens * outputCostPerToken);
+        (promptTokens * this.costInputPerToken) +
+        (completionTokens * this.costOutputPerToken);
+
+      const usdToBrl =
+        await this.exchangeRateService.getUsdToBrl();
 
       const costBrl =
         costUsd * usdToBrl;
