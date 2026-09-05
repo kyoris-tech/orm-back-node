@@ -1,0 +1,1829 @@
+<title>Manual do Back Orm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --ink: #13181d;
+    --ink-soft: #55677a;
+    --ink-faint: #7b8b9c;
+    --ground: #f7fafd;
+    --surface: #ffffff;
+    --surface-alt: #eef4fd;
+    --line: #d3dde8;
+    --line-soft: #e6edf5;
+    --accent: #0065d1;
+    --accent-bright: #007aff;
+    --accent-wash: #e8f1ff;
+    --deep: #0c3355;
+    --ok: #0a8a3c;
+    --ok-wash: #e6fff2;
+    --danger: #c40003;
+    --danger-wash: #fff3f3;
+    --warn: #9a5b00;
+    --warn-wash: #fff6e6;
+    --shadow: 0 1px 2px rgba(12, 51, 85, .06), 0 8px 24px -16px rgba(12, 51, 85, .35);
+
+    --step--1: .8125rem;
+    --step-0: 1rem;
+    --step-1: 1.0625rem;
+    --step-2: 1.3125rem;
+    --step-3: 1.625rem;
+    --step-4: clamp(1.9rem, 1.4rem + 2vw, 2.55rem);
+
+    --rail: 264px;
+    --measure: 780px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e3ebf3;
+      --ink-soft: #9bacbe;
+      --ink-faint: #7d8fa2;
+      --ground: #0a1017;
+      --surface: #111a24;
+      --surface-alt: #17222e;
+      --line: #27343f;
+      --line-soft: #1b2631;
+      --accent: #62a9ff;
+      --accent-bright: #8bc0ff;
+      --accent-wash: #14263a;
+      --deep: #a9caeb;
+      --ok: #33c274;
+      --ok-wash: #10281c;
+      --danger: #ff7275;
+      --danger-wash: #2b1416;
+      --warn: #e2a44b;
+      --warn-wash: #2b2113;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e3ebf3;
+    --ink-soft: #9bacbe;
+    --ink-faint: #7d8fa2;
+    --ground: #0a1017;
+    --surface: #111a24;
+    --surface-alt: #17222e;
+    --line: #27343f;
+    --line-soft: #1b2631;
+    --accent: #62a9ff;
+    --accent-bright: #8bc0ff;
+    --accent-wash: #14263a;
+    --deep: #a9caeb;
+    --ok: #33c274;
+    --ok-wash: #10281c;
+    --danger: #ff7275;
+    --danger-wash: #2b1416;
+    --warn: #e2a44b;
+    --warn-wash: #2b2113;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--step-0);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .u-display {
+    font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  code, kbd, pre, .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent-bright); }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    align-items: start;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 28px;
+    gap: 56px;
+  }
+
+  .rail {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 34px 0 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    scrollbar-width: thin;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    letter-spacing: -.01em;
+  }
+
+  .brand-repo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .7rem;
+    color: var(--ink-faint);
+  }
+
+  .filter {
+    width: 100%;
+    font: inherit;
+    font-size: var(--step--1);
+    padding: 8px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .filter::placeholder { color: var(--ink-faint); }
+
+  .nav-group-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: .66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .11em;
+    color: var(--ink-faint);
+    margin: 10px 0 6px;
+  }
+
+  .nav { display: flex; flex-direction: column; gap: 1px; }
+
+  .nav a {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 9px;
+    align-items: baseline;
+    padding: 5px 9px 5px 6px;
+    border-radius: 7px;
+    font-size: .855rem;
+    line-height: 1.35;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+  }
+
+  .nav a:hover { background: var(--surface-alt); color: var(--ink); }
+
+  .nav a[aria-current="true"] {
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-weight: 600;
+    border-left-color: var(--accent-bright);
+  }
+
+  .nav .n {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .72rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .nav a[aria-current="true"] .n { color: var(--accent); }
+  .nav a.is-hidden { display: none; }
+
+  .nav-empty {
+    font-size: .8rem;
+    color: var(--ink-faint);
+    padding: 6px 9px;
+  }
+
+  .doc {
+    padding: 34px 0 120px;
+    min-width: 0;
+    max-width: var(--measure);
+  }
+
+  .masthead { padding-bottom: 30px; border-bottom: 1px solid var(--line); }
+
+  .eyebrow {
+    font-family: 'Outfit', sans-serif;
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-size: var(--step-4);
+    font-weight: 700;
+    letter-spacing: -.022em;
+    line-height: 1.1;
+    margin: 12px 0 14px;
+  }
+
+  .lede {
+    font-size: var(--step-1);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .715rem;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    background: var(--surface);
+  }
+  .chip strong { color: var(--ink); font-weight: 600; }
+
+  .startline {
+    margin-top: 26px;
+    padding: 15px 18px;
+    background: var(--accent-wash);
+    border-radius: 10px;
+    font-size: .945rem;
+    color: var(--ink);
+  }
+  .startline strong { font-weight: 600; }
+  .startline p { margin: 0; max-width: none; }
+  .startline p + p { margin-top: 8px; }
+
+  .sec { padding-top: 54px; scroll-margin-top: 20px; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 13px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 22px;
+  }
+
+  .sec-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sec-head h2 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: -.018em;
+  }
+
+  h3 {
+    font-size: var(--step-2);
+    font-weight: 600;
+    letter-spacing: -.012em;
+    margin: 36px 0 12px;
+  }
+
+  h4 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    margin: 28px 0 10px;
+    color: var(--deep);
+  }
+
+  p { margin: 0 0 14px; max-width: 68ch; }
+
+  ul, ol { margin: 0 0 16px; padding-left: 21px; max-width: 68ch; }
+  li { margin-bottom: 6px; }
+  li::marker { color: var(--ink-faint); }
+
+  strong { font-weight: 600; }
+
+  p code, li code, td code, th code, dd code {
+    font-size: .855em;
+    background: var(--surface-alt);
+    padding: 1.5px 5px;
+    border-radius: 4px;
+    color: var(--deep);
+    word-break: break-word;
+  }
+
+  .scroll {
+    overflow-x: auto;
+    margin: 0 0 22px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+    line-height: 1.5;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: 'Outfit', sans-serif;
+    font-size: .69rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: var(--ink-faint);
+    padding: 10px 15px;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 11px 15px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--surface-alt); }
+
+  td:first-child { color: var(--ink); }
+  .t-tight td:first-child { white-space: nowrap; }
+
+  .verb {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .verb.get { color: var(--accent); background: var(--accent-wash); }
+  .verb.post { color: var(--ok); background: var(--ok-wash); }
+  .verb.del { color: var(--danger); background: var(--danger-wash); }
+  .verb.patch { color: var(--warn); background: var(--warn-wash); }
+
+  pre {
+    margin: 0 0 20px;
+    padding: 15px 18px;
+    background: var(--surface-alt);
+    border-left: 2px solid var(--line);
+    border-radius: 0 8px 8px 0;
+    overflow-x: auto;
+    font-size: .8125rem;
+    line-height: 1.62;
+    color: var(--ink);
+    tab-size: 2;
+  }
+
+  pre code { font-family: inherit; }
+
+  .rule {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent-bright);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 20px 6px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .rule > h4 { margin-top: 0; color: var(--ink); }
+  .rule > *:last-child { margin-bottom: 14px; }
+
+  .trap {
+    border-left: 3px solid var(--warn);
+    background: var(--surface);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+  }
+  .trap p { margin: 0; }
+  .trap p + p { margin-top: 7px; }
+  .trap b {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .pending {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--danger);
+    background: var(--surface);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .pending h4 { margin: 0 0 8px; color: var(--ink); font-size: 1rem; }
+  .pending p { margin: 0; font-size: .93rem; }
+  .pending p + p { margin-top: 8px; }
+
+  .note {
+    background: var(--surface-alt);
+    border-radius: 10px;
+    padding: 15px 18px;
+    margin-bottom: 20px;
+    font-size: .93rem;
+  }
+  .note > *:last-child { margin-bottom: 0; }
+
+  .flow {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+    max-width: none;
+  }
+
+  .flow li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 13px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    margin: 0;
+    align-items: baseline;
+  }
+  .flow li:last-child { border-bottom: 0; }
+
+  .flow .n {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .74rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flow .path {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    color: var(--ink);
+    word-break: break-word;
+  }
+
+  .flow .what {
+    display: block;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .85rem;
+    color: var(--ink-soft);
+    margin-top: 1px;
+  }
+
+  .layers {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .layer {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 14px;
+    align-items: baseline;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+  }
+
+  .layer-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    color: var(--accent);
+  }
+
+  .layer-what { font-size: .89rem; color: var(--ink-soft); }
+  .layer-what strong { color: var(--ink); }
+
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line-soft);
+    margin: 0;
+  }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist .box {
+    width: 15px;
+    height: 15px;
+    margin-top: 4px;
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+  }
+
+  .foot {
+    margin-top: 64px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    font-size: .84rem;
+    color: var(--ink-faint);
+  }
+
+  .rail-toggle { display: none; }
+
+  @media (max-width: 940px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+      padding: 0 20px;
+    }
+    .rail {
+      position: static;
+      max-height: none;
+      padding: 22px 0 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .rail-toggle {
+      display: block;
+      font: inherit;
+      font-family: 'Outfit', sans-serif;
+      font-size: .82rem;
+      font-weight: 600;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 13px;
+      text-align: left;
+    }
+    .rail-body[hidden] { display: none; }
+    .doc { padding-top: 26px; max-width: none; }
+    .layer { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="brand">
+      <span class="brand-name">Manual do Back Orm</span>
+      <span class="brand-repo">orm-back-node</span>
+    </div>
+
+    <button type="button" class="rail-toggle" id="railToggle" aria-expanded="false" aria-controls="railBody">Seções ▾</button>
+
+    <div class="rail-body" id="railBody">
+      <input type="search" id="filter" class="filter" placeholder="Filtrar seções…" aria-label="Filtrar seções" autocomplete="off">
+
+      <p class="nav-group-label" data-group>Essencial</p>
+      <nav class="nav" data-group-items>
+        <a href="#s1"><span class="n">1</span><span>Visão geral</span></a>
+        <a href="#s2"><span class="n">2</span><span>Como começar</span></a>
+        <a href="#s3"><span class="n">3</span><span>Regras do código</span></a>
+        <a href="#s4"><span class="n">4</span><span>Camadas e organização</span></a>
+      </nav>
+
+      <p class="nav-group-label" data-group>Referência</p>
+      <nav class="nav" data-group-items>
+        <a href="#s5"><span class="n">5</span><span>Onde encontrar cada coisa</span></a>
+        <a href="#s6"><span class="n">6</span><span>Ciclo de uma requisição</span></a>
+        <a href="#s7"><span class="n">7</span><span>Autenticação e autorização</span></a>
+        <a href="#s8"><span class="n">8</span><span>Banco de dados</span></a>
+        <a href="#s9"><span class="n">9</span><span>Paginação</span></a>
+        <a href="#s10"><span class="n">10</span><span>Planos e limites</span></a>
+        <a href="#s11"><span class="n">11</span><span>Análise por IA</span></a>
+        <a href="#s12"><span class="n">12</span><span>Auditoria</span></a>
+        <a href="#s13"><span class="n">13</span><span>Mapa de endpoints</span></a>
+        <a href="#s14"><span class="n">14</span><span>Guia dos módulos</span></a>
+      </nav>
+
+      <p class="nav-group-label" data-group>Ao trabalhar</p>
+      <nav class="nav" data-group-items>
+        <a href="#s15"><span class="n">15</span><span>Receitas</span></a>
+        <a href="#s16"><span class="n">16</span><span>Armadilhas e pendências</span></a>
+        <a href="#s17"><span class="n">17</span><span>Antes de concluir</span></a>
+      </nav>
+
+      <p class="nav-empty" id="navEmpty" hidden>Nenhuma seção com esse termo.</p>
+    </div>
+  </aside>
+
+  <main class="doc">
+
+    <header class="masthead">
+      <span class="eyebrow">Documentação da API</span>
+      <h1>Manual do Back Orm</h1>
+      <p class="lede">
+        Referência viva do <code>orm-back-node</code>: as regras que o código segue, como as camadas
+        se dividem, o que cada módulo faz e o passo a passo para adicionar coisas novas.
+      </p>
+
+      <div class="meta">
+        <span class="chip"><strong>NestJS 11</strong></span>
+        <span class="chip"><strong>Prisma 6</strong> + PostgreSQL</span>
+        <span class="chip"><strong>Passport</strong> JWT</span>
+        <span class="chip"><strong>OpenAI</strong> gpt-4.1-mini</span>
+        <span class="chip"><strong>48</strong> rotas</span>
+      </div>
+
+      <div class="startline">
+        <p><strong>Leia as seções 1 a 4 antes de escrever qualquer código.</strong> O resto é consulta.</p>
+        <p>Documento irmão: o <strong>Manual do Front Orm</strong>, em <code>orm-dashboard-front/docs/</code>.</p>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section class="sec" id="s1">
+      <div class="sec-head"><span class="sec-num">1</span><h2>Visão geral</h2></div>
+
+      <p>
+        <code>orm-back-node</code> é a API da <strong>Orm Intelligence</strong>: regra de negócio, banco
+        e a integração com a OpenAI que faz a triagem de currículos.
+      </p>
+
+      <h3>Quem chama esta API</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Cliente</th><th>Como</th></tr></thead>
+          <tbody>
+            <tr><td><code>orm-dashboard-front</code></td><td><strong>Nunca do navegador.</strong> Os Route Handlers do Next (BFF) chamam a API a partir do servidor deles</td></tr>
+            <tr><td><code>orm-front-candidate</code></td><td>front do candidato</td></tr>
+            <tr><td>Rotas públicas</td><td><code>/api/v1/public/**</code> — sem sessão, chamadas direto</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Isso importa: o front do dashboard tem uma camada BFF na frente. Quando um dado não aparece na
+        tela, o problema pode estar <strong>aqui</strong> ou <strong>no BFF do Next</strong> — os dois
+        precisam ser conferidos.
+      </p>
+
+      <h3>Stack</h3>
+      <ul>
+        <li><strong>NestJS 11</strong> + <strong>TypeScript</strong> (<code>strictNullChecks</code>)</li>
+        <li><strong>Prisma 6</strong> + <strong>PostgreSQL</strong></li>
+        <li><strong>Passport JWT</strong> para sessão, <strong>bcrypt</strong> para senha</li>
+        <li><strong>class-validator</strong> / <strong>class-transformer</strong> nos DTOs</li>
+        <li><strong>@nestjs/throttler</strong> para rate limit</li>
+        <li><strong>OpenAI</strong>, <strong>pdf-parse</strong> e <strong>mammoth</strong> para extração, <strong>pdfkit</strong> para gerar PDF</li>
+        <li><strong>Swagger</strong> em <code>/docs</code>, só fora de produção</li>
+      </ul>
+
+      <h3>Prefixo global</h3>
+      <p>
+        Todas as rotas de negócio vivem sob <strong><code>/api/v1</code></strong>, aplicado uma única vez
+        em <code>main.ts</code>:
+      </p>
+      <pre><code>app.setGlobalPrefix(API_PREFIX, { exclude: ['/'] });</code></pre>
+      <p>
+        Os controllers declaram só o próprio caminho (<code>@Controller('users')</code>). A raiz
+        <code>/</code> fica de fora do prefixo — é o health check.
+      </p>
+    </section>
+
+    <!-- 2 -->
+    <section class="sec" id="s2">
+      <div class="sec-head"><span class="sec-num">2</span><h2>Como começar</h2></div>
+
+      <pre><code>npm install
+npx prisma generate
+npx prisma migrate dev
+npm run start:dev</code></pre>
+
+      <h3>Variáveis de ambiente</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Variável</th><th>Obrigatória</th><th>Para quê</th></tr></thead>
+          <tbody>
+            <tr><td><code>DATABASE_URL</code></td><td>sim</td><td>Postgres</td></tr>
+            <tr><td><code>JWT_SECRET</code></td><td>sim</td><td>assinatura do token; <strong>a aplicação se recusa a subir sem ela</strong></td></tr>
+            <tr><td><code>OPENAI_API_KEY</code></td><td>sim</td><td>análise de currículo</td></tr>
+            <tr><td><code>OPENAI_RESUME_MODEL</code></td><td>não</td><td>default <code>gpt-4.1-mini</code></td></tr>
+            <tr><td><code>COST_INPUT</code> / <code>COST_OUTPUT</code></td><td>não</td><td>custo por milhão de tokens — <strong>trocar junto com o modelo</strong></td></tr>
+            <tr><td><code>USD_BRL</code></td><td>não</td><td>fixa a cotação e desliga a busca automática</td></tr>
+            <tr><td><code>CORS_ORIGINS</code></td><td>não</td><td>lista separada por vírgula</td></tr>
+            <tr><td><code>PORT</code></td><td>não</td><td>default 3000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <code>JWT_SECRET</code> não tem fallback por decisão de segurança — ver
+        <code>src/config/jwt.config.ts</code>.
+      </p>
+
+      <h3>Scripts</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Comando</th><th>O quê</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm run start:dev</code></td><td>watch mode</td></tr>
+            <tr><td><code>npm run build</code></td><td>compila para <code>dist/</code></td></tr>
+            <tr><td><code>npm run lint</code></td><td>ESLint <strong>com <code>--fix</code></strong> (aplica o Prettier)</td></tr>
+            <tr><td><code>npx tsc --noEmit</code></td><td>checagem de tipos</td></tr>
+            <tr><td><code>npm test</code></td><td>testes unitários</td></tr>
+            <tr><td><code>npx prisma studio</code></td><td>inspecionar o banco</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Por onde começar a ler</h3>
+      <ol>
+        <li><code>src/main.ts</code> — prefixo, validação global, CORS, Swagger</li>
+        <li><code>src/app.module.ts</code> — os módulos que existem</li>
+        <li><code>src/modules/users/</code> — um módulo completo e pequeno, com as quatro camadas</li>
+        <li><code>src/common/</code> — o que é compartilhado por todo mundo</li>
+        <li><code>prisma/schema.prisma</code> — o domínio de dados</li>
+      </ol>
+    </section>
+
+    <!-- 3 -->
+    <section class="sec" id="s3">
+      <div class="sec-head"><span class="sec-num">3</span><h2>Regras do código</h2></div>
+
+      <p>Iguais às do front, com o que é específico de Nest somado.</p>
+
+      <div class="rule">
+        <h4>3.1 · Idioma</h4>
+        <ul>
+          <li><strong>Código em inglês</strong>: variáveis, funções, classes, tipos, parâmetros, arquivos, pastas.</li>
+          <li><strong>Português apenas no que sai para o cliente</strong>: mensagens de exceção, textos de log.</li>
+        </ul>
+        <pre><code>throw new NotFoundException('Currículo não encontrado');
+throw new ForbiddenException('Sem permissão para esta operação');</code></pre>
+        <p>
+          Mensagem de erro é interface de usuário — o front exibe ela crua. Escreva a mensagem que a
+          pessoa precisa ler, não o erro técnico.
+        </p>
+      </div>
+
+      <div class="rule">
+        <h4>3.2 · Sem comentários</h4>
+        <p>
+          Não há um único comentário em <code>src/</code>. Se um trecho precisa de comentário, o trecho
+          está errado — extraia um método com nome descritivo ou nomeie a constante.
+        </p>
+        <pre><code>const RECENT_RESUMES_LIMIT = 3;
+const TOKEN_EXPIRES_IN_SECONDS = 3600;
+const MAX_COMPLETION_TOKENS = 3000;</code></pre>
+      </div>
+
+      <div class="rule">
+        <h4>3.3 · Zero <code>any</code></h4>
+        <p>
+          <code>src/</code> não tem <strong>nenhum</strong> <code>any</code> explícito, e é para continuar assim.
+        </p>
+        <p>
+          Isso não é preciosismo: <code>user: any</code> deixou passar para produção um bug em que
+          <code>user.id</code> (que não existe — o campo é <code>userId</code>) gravava
+          <code>createdById</code> nulo em todo currículo, em silêncio. Com
+          <code>AuthenticatedUser</code> o compilador rejeita:
+        </p>
+        <pre><code>error TS2339: Property 'id' does not exist on type 'AuthenticatedUser'.</code></pre>
+        <p>Quando um valor externo é realmente desconhecido, use <code>unknown</code> e estreite:</p>
+        <pre><code>catch (error) {
+  this.logger.error('...', error instanceof Error ? error.stack : String(error));
+}</code></pre>
+        <p>
+          Na fronteira com o Prisma, <code>dataJson</code> é <code>Prisma.JsonValue</code> e o cast para o
+          tipo de domínio acontece na leitura — o cast fica <strong>na fronteira</strong>, não espalhado.
+        </p>
+      </div>
+
+      <div class="rule">
+        <h4>3.4 · Nada de <code>@Req() req: any</code></h4>
+        <p>Handler nunca toca no <code>Request</code> cru para pegar o usuário. Use o decorator:</p>
+        <pre><code>@Get('profile')
+async getProfile(@CurrentUser() currentUser: AuthenticatedUser) {
+  return this.userService.getProfile(currentUser.userId);
+}</code></pre>
+      </div>
+
+      <div class="rule">
+        <h4>3.5 · Camadas</h4>
+        <p>A dependência aponta <strong>para dentro</strong>:</p>
+        <ul>
+          <li><code>domain/</code> não importa de <code>application/</code>, <code>infrastructure/</code> nem de Nest</li>
+          <li><code>presentation/</code> não fala com Prisma direto — chama o service</li>
+          <li><code>application/</code> não conhece <code>Request</code>, <code>Response</code> nem HTTP</li>
+        </ul>
+      </div>
+
+      <div class="rule">
+        <h4>3.6 · Estilo</h4>
+        <ul>
+          <li>Aspas simples, vírgula final, 80 colunas (Prettier via ESLint).</li>
+          <li>Um módulo por domínio, registrado em <code>app.module.ts</code>.</li>
+          <li>Constantes de módulo no topo do arquivo, antes da classe.</li>
+          <li><code>import type { ... }</code> para imports que são só tipo.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="sec" id="s4">
+      <div class="sec-head"><span class="sec-num">4</span><h2>Camadas e organização</h2></div>
+
+      <pre><code>src/
+  main.ts              bootstrap: prefixo, ValidationPipe, CORS, Swagger
+  app.module.ts        composição dos módulos
+
+  common/              compartilhado por todos os módulos
+    decorators/          @CurrentUser, @Roles
+    guards/              JwtAuthGuard, RolesGuard
+    dto/                 PaginationQueryDto
+    pagination/          parsePagination, buildPaginatedResult
+    types/               AuthenticatedUser, UserRole
+
+  config/              jwt.config.ts
+
+  infrastructure/      infraestrutura transversal
+    prisma/              PrismaService (@Global), PrismaModule
+
+  modules/&lt;nome&gt;/
+    domain/              tipos e contratos — sem framework, sem Prisma
+    application/         services = casos de uso
+    infrastructure/      adaptadores: OpenAI, PDF, extractor, throttlers
+    presentation/        controller + dto/
+    &lt;nome&gt;.module.ts</code></pre>
+
+      <h3>A direção da dependência</h3>
+
+      <div class="layers">
+        <div class="layer">
+          <span class="layer-name">domain</span>
+          <span class="layer-what"><strong>O núcleo.</strong> Só tipos e funções puras. Não importa nada de Nest, de Prisma nem de outra camada. É o que descreve o negócio.</span>
+        </div>
+        <div class="layer">
+          <span class="layer-name">application</span>
+          <span class="layer-what"><strong>Orquestra.</strong> Valida regra, chama o Prisma, registra auditoria. É a única camada que toca o banco.</span>
+        </div>
+        <div class="layer">
+          <span class="layer-name">infrastructure</span>
+          <span class="layer-what"><strong>Fala com o mundo.</strong> OpenAI, geração de PDF, extração de texto, cotação do dólar, store em memória dos jobs.</span>
+        </div>
+        <div class="layer">
+          <span class="layer-name">presentation</span>
+          <span class="layer-what"><strong>A casca HTTP.</strong> Rota, DTO de entrada, guard, decorator. Sem regra de negócio.</span>
+        </div>
+      </div>
+
+      <p>
+        Um <code>domain/</code> que importa de <code>application/</code> é bug de arquitetura, não questão
+        de gosto — foi o que permitiu que <code>AuthUser</code> vivesse dentro de
+        <code>jwt.strategy.ts</code> enquanto metade do sistema dependia dele.
+      </p>
+
+      <h3>Por que o Prisma não está atrás de repositórios</h3>
+      <div class="note">
+        <p>
+          Escolha deliberada. Não há interfaces de repositório nem mappers entre domínio e persistência:
+          os services usam <code>PrismaService</code> direto. Para um CRUD deste tamanho e sem suíte de
+          testes que justifique a inversão, a indireção custaria mais do que entrega. As camadas separam
+          <strong>responsabilidade e tipagem</strong>, não acesso a dados.
+        </p>
+        <p>
+          Se um dia existir necessidade real de trocar o ORM ou testar sem banco, o ponto de corte já está
+          desenhado: <code>application/</code> é a única camada que toca o Prisma.
+        </p>
+      </div>
+
+      <h3>Anatomia de um módulo</h3>
+      <pre><code>modules/resumes/
+  domain/
+    resume-data.ts        ResumeData, ResumeExperience, ResumeSearchableFields
+    resume-analysis.ts    ResumeAnalysis, ResumeAnalysisUsage
+    upload-actor.ts       UploadActor
+    bulk-upload.ts        BulkUploadItemResult, BulkUploadSummary
+  application/
+    resumes.service.ts    busca, ranking, soft/hard delete, restore
+    upload.service.ts     upload individual e em lote
+  infrastructure/
+    openai/               chamada e contrato do prompt
+    extractor/            PDF e DOCX → texto
+    pdf/                  geração do PDF com marca d'água
+    bulk/                 store em memória dos jobs
+  presentation/
+    resumes.controller.ts
+    dto/
+  resumes.module.ts</code></pre>
+    </section>
+
+    <!-- 5 -->
+    <section class="sec" id="s5">
+      <div class="sec-head"><span class="sec-num">5</span><h2>Onde encontrar cada coisa</h2></div>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Você quer…</th><th>Vá para</th></tr></thead>
+          <tbody>
+            <tr><td>Mudar o prefixo, CORS, validação global, Swagger</td><td><code>src/main.ts</code></td></tr>
+            <tr><td>Adicionar um módulo ao app</td><td><code>src/app.module.ts</code></td></tr>
+            <tr><td>Mudar o formato de paginação</td><td><code>src/common/pagination/pagination.ts</code></td></tr>
+            <tr><td>Mudar o tipo do usuário autenticado</td><td><code>src/common/types/authenticated-user.ts</code></td></tr>
+            <tr><td>Mudar como o papel é verificado</td><td><code>src/common/guards/roles.guard.ts</code></td></tr>
+            <tr><td>Mudar as mensagens de erro de token</td><td><code>src/common/guards/jwt-auth.guard.ts</code></td></tr>
+            <tr><td>Mudar o segredo/expiração do JWT</td><td><code>src/config/jwt.config.ts</code> e <code>modules/auth/auth.module.ts</code></td></tr>
+            <tr><td>Mudar o payload do login</td><td><code>modules/auth/domain/login-result.ts</code></td></tr>
+            <tr><td>Mexer em empresas, plano, token de API</td><td><code>modules/companies/</code></td></tr>
+            <tr><td>Mexer em usuários, senha, bloqueio, exportação</td><td><code>modules/users/</code></td></tr>
+            <tr><td>Mexer nos planos e nos limites</td><td><code>modules/plans/</code></td></tr>
+            <tr><td>Mexer no upload / importação de currículo</td><td><code>modules/resumes/application/upload.service.ts</code></td></tr>
+            <tr><td>Mexer na busca e no cálculo de aderência</td><td><code>modules/resumes/application/resumes.service.ts</code></td></tr>
+            <tr><td>Mexer no prompt da IA ou no custo</td><td><code>modules/resumes/infrastructure/openai/openai.service.ts</code></td></tr>
+            <tr><td>Mexer no PDF do currículo</td><td><code>modules/resumes/infrastructure/pdf/resume-pdf.service.ts</code></td></tr>
+            <tr><td>Mexer em vagas e no link público</td><td><code>modules/job-openings/</code></td></tr>
+            <tr><td>Mexer em processos seletivos e candidatos</td><td><code>modules/selection-processes/</code></td></tr>
+            <tr><td>Mexer no log de auditoria</td><td><code>modules/audit-logs/</code></td></tr>
+            <tr><td>Mexer na cotação do dólar</td><td><code>modules/exchange-rate/</code></td></tr>
+            <tr><td>Mudar o modelo de dados</td><td><code>prisma/schema.prisma</code> + migration</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Como buscar</h3>
+      <pre><code>grep -rn "assertFeatureEnabled" src      # onde o plano bloqueia
+grep -rn "auditLogService.create" src    # o que é auditado
+grep -rn "@Roles(" src                   # o que exige papel específico
+grep -rn "parsePagination" src           # o que é paginado</code></pre>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Padrão</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><code>&lt;nome&gt;.controller.ts</code></td><td>rota HTTP, em <code>presentation/</code></td></tr>
+            <tr><td><code>&lt;nome&gt;.service.ts</code></td><td>caso de uso, em <code>application/</code></td></tr>
+            <tr><td><code>&lt;nome&gt;.module.ts</code></td><td>composição, na raiz do módulo</td></tr>
+            <tr><td><code>*.dto.ts</code></td><td>entrada HTTP validada, em <code>presentation/dto/</code></td></tr>
+            <tr><td>nomes de domínio</td><td>contratos, em <code>domain/</code></td></tr>
+            <tr><td><code>*.guard.ts</code> / <code>*.strategy.ts</code></td><td>infraestrutura de auth</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="sec" id="s6">
+      <div class="sec-head"><span class="sec-num">6</span><h2>Ciclo de uma requisição</h2></div>
+
+      <p><code>GET /api/v1/users?page=1&amp;pageSize=10</code>, do HTTP ao banco:</p>
+
+      <ul class="flow">
+        <li><span class="n">1</span><span><span class="path">proxy do Next (BFF)</span><span class="what">repassa com Authorization: Bearer</span></span></li>
+        <li><span class="n">2</span><span><span class="path">ThrottlerModule</span><span class="what">rate limit global</span></span></li>
+        <li><span class="n">3</span><span><span class="path">JwtAuthGuard</span><span class="what">valida o token, popula request.user</span></span></li>
+        <li><span class="n">4</span><span><span class="path">RolesGuard</span><span class="what">confere @Roles('admin')</span></span></li>
+        <li><span class="n">5</span><span><span class="path">ValidationPipe</span><span class="what">valida e transforma ListUsersDto</span></span></li>
+        <li><span class="n">6</span><span><span class="path">UserController.listAll</span><span class="what">presentation</span></span></li>
+        <li><span class="n">7</span><span><span class="path">UserService.listAll</span><span class="what">application: monta o where, pagina</span></span></li>
+        <li><span class="n">8</span><span><span class="path">PrismaService</span><span class="what">$transaction([findMany, count])</span></span></li>
+        <li><span class="n">9</span><span><span class="path">buildPaginatedResult</span><span class="what">{ data, pagination }</span></span></li>
+      </ul>
+
+      <h3>Formato de um controller</h3>
+      <pre><code>@Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get()
+  @Roles('admin')
+  async listAll(@Query() query: ListUsersDto) {
+    return this.userService.listAll(query);
+  }
+
+  @Patch(':id/status')
+  @Roles('admin', 'mod')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.userService.updateStatus(id, dto.status, currentUser);
+  }
+}</code></pre>
+      <p>
+        Regras do controller: sem regra de negócio, sem Prisma, sem <code>req</code> cru.
+        Ele recebe, delega e devolve.
+      </p>
+
+      <h3>ValidationPipe</h3>
+      <pre><code>new ValidationPipe({
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+})</code></pre>
+      <div class="note">
+        <p>
+          <strong><code>forbidNonWhitelisted: true</code> tem uma consequência que já mordeu:</strong>
+          qualquer propriedade enviada que <strong>não</strong> tenha um decorator do class-validator no
+          DTO faz a requisição falhar com 400. Um DTO sem decorators rejeita <em>tudo</em> — ver a
+          pendência do <code>POST /resumes</code> na <a href="#s16">seção 16</a>.
+        </p>
+      </div>
+
+      <h3>Ordem das rotas</h3>
+      <p>Rota específica antes de rota com parâmetro:</p>
+      <pre><code>@Delete('admin/:id/permanent')   // antes
+@Delete(':id')                   // depois</code></pre>
+    </section>
+
+    <!-- 7 -->
+    <section class="sec" id="s7">
+      <div class="sec-head"><span class="sec-num">7</span><h2>Autenticação e autorização</h2></div>
+
+      <h3>Duas credenciais no login</h3>
+      <p><code>POST /api/v1/auth/login</code> exige as duas:</p>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Credencial</th><th>Onde</th><th>Para quê</th></tr></thead>
+          <tbody>
+            <tr><td><code>x-api-key</code></td><td>header</td><td>identifica a <strong>empresa</strong></td></tr>
+            <tr><td>e-mail + senha</td><td>body</td><td>identifica a <strong>pessoa</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        A empresa precisa estar <code>ACTIVE</code>, o usuário precisa estar <code>ACTIVE</code>, e o
+        usuário precisa pertencer àquela empresa. Falhar qualquer uma delas nega o login.
+      </p>
+
+      <h3>O contrato de resposta</h3>
+      <div class="note">
+        <p>
+          <code>LoginResult</code> usa <strong>snake_case</strong> porque é o contrato já consumido pelo
+          front. Não é o estilo do resto do código — é compatibilidade, e mudar quebra o login.
+        </p>
+      </div>
+      <pre><code>{
+  access_token, token_type: 'bearer', expires_in,
+  user: { id, name, email, company_id, company_name, role }
+}</code></pre>
+
+      <h3>O usuário autenticado</h3>
+      <pre><code>interface AuthenticatedUser {
+  userId: string;      // vem de payload.sub — NÃO existe campo "id"
+  name: string;
+  email: string;
+  companyId: string;
+  role: UserRole;      // 'admin' | 'mod' | 'recruiter'
+}</code></pre>
+      <p>Token expira em 1h.</p>
+
+      <h3>Papéis</h3>
+      <p>
+        <code>@Roles('admin')</code> no handler ou na classe; o <code>RolesGuard</code> compara com
+        <code>user.role</code>. Sem <code>@Roles</code>, qualquer usuário autenticado passa.
+      </p>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Papel</th><th>Alcance</th></tr></thead>
+          <tbody>
+            <tr><td><code>admin</code></td><td>administração: empresas, usuários, planos, auditoria, exclusão permanente</td></tr>
+            <tr><td><code>mod</code></td><td>pode alterar status de usuário da própria empresa, exceto de admins</td></tr>
+            <tr><td><code>recruiter</code></td><td>operação do dia a dia</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Isolamento por empresa</h3>
+      <div class="note">
+        <p>
+          Não é o guard que garante — é cada service, filtrando por <code>companyId</code> no
+          <code>where</code>. Ao escrever uma consulta nova, <strong>o filtro por empresa é
+          responsabilidade sua</strong>.
+        </p>
+      </div>
+
+      <h3>Rate limit</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Guard</th><th>Regra</th></tr></thead>
+          <tbody>
+            <tr><td>Global (<code>ThrottlerModule</code>)</td><td>5 requisições / 60s</td></tr>
+            <tr><td><code>LoginThrottlerGuard</code></td><td>agrupa por e-mail (cai para IP se não houver e-mail)</td></tr>
+            <tr><td><code>PublicApplyThrottlerGuard</code></td><td>agrupa por código da vaga; 30 candidaturas / 30min</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Agrupar o login por e-mail evita que uma rede inteira atrás do mesmo IP seja bloqueada por causa
+        de uma pessoa errando a senha.
+      </p>
+    </section>
+
+    <!-- 8 -->
+    <section class="sec" id="s8">
+      <div class="sec-head"><span class="sec-num">8</span><h2>Banco de dados</h2></div>
+
+      <p>PostgreSQL via Prisma. Schema em <code>prisma/schema.prisma</code>.</p>
+
+      <h3>Modelos</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Modelo</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><code>Plan</code></td><td>limites (<code>maxUsers</code>, <code>maxResumesPerMonth</code>) e <code>features[]</code></td></tr>
+            <tr><td><code>Company</code></td><td>empresa cliente; tem <code>apiKey</code> única e um <code>Plan</code></td></tr>
+            <tr><td><code>User</code></td><td>pessoa; pertence a uma <code>Company</code> e tem um <code>Role</code></td></tr>
+            <tr><td><code>Role</code></td><td><code>admin</code>, <code>mod</code>, <code>recruiter</code></td></tr>
+            <tr><td><code>Resume</code></td><td>currículo importado; <code>dataJson</code> guarda a extração da IA</td></tr>
+            <tr><td><code>JobOpening</code></td><td>vaga; tem <code>publicCode</code> único para o link público</td></tr>
+            <tr><td><code>SelectionProcess</code></td><td>processo seletivo; pode estar ligado a uma vaga</td></tr>
+            <tr><td><code>SelectionProcessCandidate</code></td><td>ligação processo ↔ currículo, com <code>matchScore</code></td></tr>
+            <tr><td><code>AuditLog</code></td><td>trilha de auditoria</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Enums</h3>
+      <ul>
+        <li><code>Status</code>: <code>ACTIVE</code>, <code>INACTIVE</code>, <code>BLOCKED</code>, <code>PENDING</code>, <code>DELETED</code></li>
+        <li><code>SelectionProcessStatus</code>: <code>OPEN</code>, <code>CLOSED</code>, <code>CANCELLED</code>, <code>CONCLUDED</code></li>
+        <li><code>JobOpeningStatus</code>: <code>OPEN</code>, <code>CLOSED</code>, <code>CANCELLED</code></li>
+        <li><code>WorkModel</code>: <code>REMOTE</code>, <code>HYBRID</code>, <code>ONSITE</code></li>
+        <li><code>ContractType</code>: <code>CLT</code>, <code>PJ</code>, <code>INTERNSHIP</code>, <code>TEMPORARY</code></li>
+      </ul>
+
+      <h3>Exclusão</h3>
+      <p>Nada some de verdade, com uma exceção:</p>
+      <ul>
+        <li><strong>Currículo</strong>: soft delete via <code>deletedAt</code>; toda consulta filtra <code>deletedAt: null</code>. Só <code>admin</code> faz hard delete.</li>
+        <li><strong>Usuário</strong>: soft delete via <code>status: 'DELETED'</code>; as listagens excluem esse status.</li>
+        <li><strong>Processo e vaga</strong>: mudam de status (<code>CANCELLED</code>, <code>CLOSED</code>), nunca são apagados.</li>
+      </ul>
+
+      <h3>PrismaService</h3>
+      <p>
+        <code>@Global()</code> — não precisa importar <code>PrismaModule</code> em cada módulo, embora
+        vários ainda importem explicitamente.
+      </p>
+    </section>
+
+    <!-- 9 -->
+    <section class="sec" id="s9">
+      <div class="sec-head"><span class="sec-num">9</span><h2>Paginação</h2></div>
+
+      <p>
+        Contrato único, em <code>src/common/pagination/pagination.ts</code>, consumido tal e qual pelo front:
+      </p>
+      <pre><code>{
+  data: T[],
+  pagination: { page, pageSize, totalItems, totalPages }
+}</code></pre>
+
+      <pre><code>export const DEFAULT_PAGE_SIZE = 10;
+export const MAX_PAGE_SIZE = 2000;</code></pre>
+
+      <p>
+        <code>parsePagination</code> é tolerante de propósito: valor ausente, zero, negativo ou não
+        numérico cai no default, e <code>pageSize</code> é limitado a <code>MAX_PAGE_SIZE</code>.
+        Requisição malformada não derruba a consulta.
+      </p>
+      <div class="note">
+        <p>
+          O front pede a lista inteira mandando <code>pageSize=2000</code> — é o
+          <code>ALL_ITEMS_PAGE_SIZE</code> dele. Por isso <code>MAX_PAGE_SIZE</code>
+          <strong>não pode ser reduzido</strong> sem quebrar os selects e as métricas do dashboard.
+        </p>
+      </div>
+
+      <h3>O padrão no service</h3>
+      <pre><code>const { page, pageSize, skip, take } = parsePagination(query.page, query.pageSize);
+
+const [items, totalItems] = await this.prisma.$transaction([
+  this.prisma.user.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
+  this.prisma.user.count({ where }),
+]);
+
+return buildPaginatedResult(items, totalItems, page, pageSize);</code></pre>
+      <p>
+        O <code>$transaction</code> importa: garante que a página e a contagem enxerguem o mesmo estado
+        do banco.
+      </p>
+
+      <h3>A exceção: busca de currículos</h3>
+      <p>
+        <code>findAllWithCompatibility</code> <strong>não</strong> pagina no banco. Ele carrega os
+        currículos da empresa, calcula a aderência de cada um, ordena por ela e só então fatia a página.
+        Não tem como ser diferente: a ordenação depende de um cálculo que o Postgres não conhece.
+      </p>
+      <p>
+        Isso é aceitável no volume atual e é o primeiro lugar a doer quando uma empresa tiver dezenas de
+        milhares de currículos.
+      </p>
+
+      <h3>Filtro é sempre no servidor</h3>
+      <p>
+        Filtrar no cliente com paginação no servidor quebra a contagem — uma página de 10 exibiria 7,
+        com o total dizendo outra coisa. Todo filtro de lista entra no <code>where</code>.
+      </p>
+    </section>
+
+    <!-- 10 -->
+    <section class="sec" id="s10">
+      <div class="sec-head"><span class="sec-num">10</span><h2>Planos e limites</h2></div>
+
+      <p>
+        <code>PlanLimitsService</code> é o guardião. Três asserções, chamadas pelos services antes de agir:
+      </p>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Método</th><th>Onde é chamado</th><th>Bloqueia</th></tr></thead>
+          <tbody>
+            <tr><td><code>assertCanCreateUser</code></td><td>criação de usuário</td><td>acima de <code>maxUsers</code> ativos</td></tr>
+            <tr><td><code>assertCanProcessResume</code></td><td>todo upload de currículo</td><td>acima de <code>maxResumesPerMonth</code></td></tr>
+            <tr><td><code>assertFeatureEnabled</code></td><td>criação de vaga e de processo</td><td>recurso fora do plano</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <code>maxUsers</code> ou <code>maxResumesPerMonth</code> em <code>null</code> significa
+        <strong>ilimitado</strong> — a asserção retorna cedo.
+      </p>
+      <p>
+        Features possíveis: <code>jobOpenings</code>, <code>selectionProcesses</code>, <code>reports</code>.
+      </p>
+      <div class="note">
+        <p>
+          A cota de currículos é mensal e conta a partir de <code>startOfCurrentMonth()</code>, que usa
+          <strong>UTC</strong> — o mês vira à meia-noite UTC, não no horário de Brasília.
+        </p>
+      </div>
+      <p>
+        <code>GET /companies/me/plan</code> devolve o uso atual; é o que alimenta o card de plano e o
+        <code>PlanFeatureGate</code> do front.
+      </p>
+    </section>
+
+    <!-- 11 -->
+    <section class="sec" id="s11">
+      <div class="sec-head"><span class="sec-num">11</span><h2>Análise de currículo por IA</h2></div>
+
+      <p>Fluxo do upload (<code>UploadService.upload</code>):</p>
+
+      <ul class="flow">
+        <li><span class="n">1</span><span><span class="path">valida arquivo e mimetype</span><span class="what">PDF, DOC, DOCX</span></span></li>
+        <li><span class="n">2</span><span><span class="path">assertCanProcessResume(companyId)</span><span class="what">cota do plano</span></span></li>
+        <li><span class="n">3</span><span><span class="path">ExtractorService</span><span class="what">pdf-parse ou mammoth → texto</span></span></li>
+        <li><span class="n">4</span><span><span class="path">OpenaiService.analyseResume</span><span class="what">texto → ResumeData + custo</span></span></li>
+        <li><span class="n">5</span><span><span class="path">prisma.resume.create</span><span class="what">dataJson, confidence, processingMs, costBrl</span></span></li>
+      </ul>
+
+      <h3>O prompt</h3>
+      <p>
+        <code>EXTRACTION_CONTRACT</code> é o system message. Roda com <code>temperature: 0</code> e
+        <code>response_format: json_object</code>.
+      </p>
+      <p>Regras que existem por um motivo específico:</p>
+      <ul>
+        <li>
+          <strong><code>skills</code></strong>: uma competência por item, e nunca quebrar nome composto —
+          “Design Systems” é um item só, senão o filtro de habilidades pontua errado.
+        </li>
+        <li>
+          <strong><code>confidence</code></strong>: precisa refletir a leitura real. O formato antigo
+          trazia o literal <code>"confidence": 0.9</code> como exemplo, e o modelo simplesmente copiava —
+          <strong>todos os currículos da base tinham exatamente 0.9</strong>. Hoje o contrato descreve os
+          critérios em vez de mostrar um número.
+        </li>
+      </ul>
+      <p>
+        Resposta truncada é tratada explicitamente: se <code>finish_reason === 'length'</code>, o serviço
+        lança erro em vez de deixar o <code>JSON.parse</code> estourar com uma mensagem incompreensível.
+      </p>
+
+      <h3>Custo</h3>
+      <pre><code>const RESUME_MODEL = process.env.OPENAI_RESUME_MODEL ?? 'gpt-4.1-mini';
+const DEFAULT_COST_INPUT_PER_MILLION = 0.4;
+const DEFAULT_COST_OUTPUT_PER_MILLION = 1.6;</code></pre>
+
+      <div class="note">
+        <p>
+          <strong>Modelo e preço moram no mesmo arquivo e precisam ser trocados juntos.</strong> Já
+          divergiram uma vez: o código chamava <code>gpt-4.1-mini</code> mas calculava com preço de
+          <code>gpt-4o-mini</code>, e o custo saía subestimado em ~2,4×.
+        </p>
+      </div>
+
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Modelo</th><th>Input</th><th>Output</th></tr></thead>
+          <tbody>
+            <tr><td><code>gpt-4.1-mini</code></td><td>0.40</td><td>1.60</td></tr>
+            <tr><td><code>gpt-4o-mini</code></td><td>0.15</td><td>0.60</td></tr>
+            <tr><td><code>gpt-4o</code></td><td>2.50</td><td>10.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Se <code>COST_INPUT</code>/<code>COST_OUTPUT</code> estiverem setados no ambiente, eles vencem os
+        defaults — <strong>inclusive em produção</strong>. Um valor velho no Railway sobrescreve o código
+        em silêncio.
+      </p>
+
+      <h3>Cotação do dólar</h3>
+      <p><code>ExchangeRateService</code> resolve <code>USD → BRL</code> nesta ordem:</p>
+      <pre><code>USD_BRL do ambiente  →  cache (6h)  →  AwesomeAPI  →  último cache  →  5.12</code></pre>
+      <p>
+        A taxa buscada só é aceita se estiver entre 1 e 20; fora disso é descartada como implausível.
+        Timeout de 3s. Nada disso derruba a análise: no pior caso usa o fallback e loga um warning.
+      </p>
+
+      <h3>Importação em lote</h3>
+      <p>
+        <code>POST /resumes/upload/bulk/start</code> devolve um <code>jobId</code> na hora e processa em
+        background. O progresso vive em memória (<code>bulkJobs</code>), com TTL de 10 minutos, e é
+        consultado em <code>GET /resumes/upload/bulk/status/:jobId</code> — que confere dono e empresa
+        antes de responder.
+      </p>
+      <div class="note">
+        <p>
+          Consequência de ser memória: <strong>o progresso não sobrevive a restart nem a múltiplas
+          instâncias.</strong> Com mais de um processo servindo a API, o status precisa sair para Redis
+          ou para o banco.
+        </p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="sec" id="s12">
+      <div class="sec-head"><span class="sec-num">12</span><h2>Auditoria</h2></div>
+
+      <p><code>AuditLogService.create</code> grava um <code>AuditLog</code>. Campos:</p>
+
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Campo</th><th>Conteúdo</th></tr></thead>
+          <tbody>
+            <tr><td><code>entityType</code></td><td><code>USER</code>, <code>COMPANY</code>, <code>resume</code>, …</td></tr>
+            <tr><td><code>entityId</code></td><td>id do registro afetado</td></tr>
+            <tr><td><code>action</code></td><td><code>UPDATE_STATUS</code>, <code>SOFT_DELETE</code>, <code>RESTORE</code>, <code>DOWNLOAD</code>, …</td></tr>
+            <tr><td><code>oldValue</code> / <code>newValue</code></td><td>texto ou JSON serializado</td></tr>
+            <tr><td><code>performedByUserId</code> / <code>performedByName</code></td><td>quem fez</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        É auditado: mudança de status e senha de usuário, alterações de empresa (nome, plano, dados,
+        token), ciclo de vida de processos e vagas, e as ações destrutivas ou sensíveis sobre currículo
+        (soft delete, hard delete, restore, download de PDF).
+      </p>
+      <p>Duas inconsistências conhecidas estão na <a href="#s16">seção 16</a>.</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="sec" id="s13">
+      <div class="sec-head"><span class="sec-num">13</span><h2>Mapa de endpoints</h2></div>
+
+      <p>48 rotas. Tudo sob <code>/api/v1</code>, exceto o health check.</p>
+
+      <h3>Público — sem autenticação</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Método</th><th>Rota</th></tr></thead>
+          <tbody>
+            <tr><td><span class="verb get">GET</span></td><td><code>/</code> — health check</td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/auth/login</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/public/job-openings</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/public/job-openings/:code</code></td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/public/job-openings/:code/apply</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Currículos</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Método</th><th>Rota</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/resumes</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/resumes</code></td><td>autenticado — <strong>ver seção 16</strong></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/resumes/recent</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/resumes/upload</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/resumes/upload/bulk</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/resumes/upload/bulk/start</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/resumes/upload/bulk/status/:jobId</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/resumes/:id/pdf</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/resumes/:id/restore</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb del">DELETE</span></td><td><code>/api/v1/resumes/:id</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb del">DELETE</span></td><td><code>/api/v1/resumes/admin/:id/permanent</code></td><td><code>admin</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Vagas e processos seletivos</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Método</th><th>Rota</th></tr></thead>
+          <tbody>
+            <tr><td><span class="verb get">GET</span> <span class="verb post">POST</span></td><td><code>/api/v1/job-openings</code></td></tr>
+            <tr><td><span class="verb get">GET</span> <span class="verb patch">PATCH</span></td><td><code>/api/v1/job-openings/:id</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/job-openings/:id/cancel</code></td></tr>
+            <tr><td><span class="verb get">GET</span> <span class="verb post">POST</span></td><td><code>/api/v1/selection-processes</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/selection-processes/:id</code></td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/selection-processes/:id/candidates</code></td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/selection-processes/link-candidate</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/selection-processes/:id/cancel</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/selection-processes/:id/close</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/selection-processes/:id/conclude</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/selection-processes/:id/job-opening</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Empresas, usuários e administração</h3>
+      <div class="scroll">
+        <table class="t-tight">
+          <thead><tr><th>Método</th><th>Rota</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><span class="verb get">GET</span> <span class="verb post">POST</span></td><td><code>/api/v1/companies</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/companies/me/plan</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/companies/:id</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/companies/:id/plan</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/companies/:id/status</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb post">POST</span></td><td><code>/api/v1/companies/:id/regenerate-token</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb get">GET</span> <span class="verb post">POST</span></td><td><code>/api/v1/users</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/users/profile</code></td><td>autenticado</td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/users/export</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/users/:id/status</code></td><td><code>admin</code>, <code>mod</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span></td><td><code>/api/v1/users/:id/password</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb get">GET</span></td><td><code>/api/v1/admin/audit-logs</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb get">GET</span> <span class="verb post">POST</span></td><td><code>/api/v1/admin/plans</code></td><td><code>admin</code></td></tr>
+            <tr><td><span class="verb patch">PATCH</span> <span class="verb del">DELETE</span></td><td><code>/api/v1/admin/plans/:id</code></td><td><code>admin</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="sec" id="s14">
+      <div class="sec-head"><span class="sec-num">14</span><h2>Guia dos módulos</h2></div>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Módulo</th><th>O que faz</th><th>Comece por</th></tr></thead>
+          <tbody>
+            <tr><td><code>health</code></td><td>health check em <code>/</code>, fora do prefixo</td><td><code>presentation/health.controller.ts</code></td></tr>
+            <tr><td><code>auth</code></td><td>login com dupla credencial, JWT, strategy</td><td><code>application/auth.service.ts</code></td></tr>
+            <tr><td><code>users</code></td><td>CRUD, senha, bloqueio, exportação LGPD</td><td><code>application/user.service.ts</code></td></tr>
+            <tr><td><code>companies</code></td><td>empresa, plano, status, token de API</td><td><code>application/company.service.ts</code></td></tr>
+            <tr><td><code>plans</code></td><td>CRUD de planos e as asserções de limite</td><td><code>application/plan-limits.service.ts</code></td></tr>
+            <tr><td><code>resumes</code></td><td>upload, extração, IA, busca com aderência, PDF</td><td><code>application/upload.service.ts</code></td></tr>
+            <tr><td><code>job-openings</code></td><td>vagas, link público, candidatura</td><td><code>application/job-opening.service.ts</code></td></tr>
+            <tr><td><code>selection-processes</code></td><td>ciclo de vida, candidatos, matching</td><td><code>application/selection-process.service.ts</code></td></tr>
+            <tr><td><code>audit-logs</code></td><td>escrita e listagem da trilha</td><td><code>application/audit-log.service.ts</code></td></tr>
+            <tr><td><code>exchange-rate</code></td><td>cotação USD→BRL com cache e fallback</td><td><code>application/exchange-rate.service.ts</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Notas por módulo</h3>
+      <ul>
+        <li>
+          <strong><code>resumes</code></strong> — o mais denso. A busca calcula aderência dividindo termos
+          por vírgula; cada termo é comparado como frase inteira contra campos derivados do
+          <code>dataJson</code>. A nota é <em>termos atendidos / termos pedidos</em>. Os filtros
+          <strong>ordenam, não excluem</strong>: quem tem 0% continua na lista, no fim.
+        </li>
+        <li>
+          <strong><code>selection-processes</code></strong> — concentra as regras de estado mais delicadas.
+          Concluir um processo exige que o candidato selecionado faça parte dele; encerrar um processo pode
+          encerrar a vaga vinculada, se não sobrar nenhum processo aberto nela.
+          <code>attachPublicApplication</code> é o caminho da candidatura pública.
+        </li>
+        <li>
+          <strong><code>job-openings</code></strong> — <code>publicCode</code> é gerado com retentativa até
+          não colidir. O controller público é o único sem sessão, e é onde o throttler por código atua.
+        </li>
+        <li>
+          <strong><code>users</code></strong> — <code>exportAll</code> cruza usuários com o log de
+          auditoria para descobrir quando e por quem cada um foi bloqueado ou excluído. É o relatório de LGPD.
+        </li>
+      </ul>
+    </section>
+
+    <!-- 15 -->
+    <section class="sec" id="s15">
+      <div class="sec-head"><span class="sec-num">15</span><h2>Receitas</h2></div>
+
+      <h3>15.1 · Novo endpoint em módulo existente</h3>
+      <ol>
+        <li>DTO em <code>presentation/dto/</code>, com decorators do class-validator (<strong>sem eles a rota rejeita tudo</strong>).</li>
+        <li>Método no service, em <code>application/</code>.</li>
+        <li>Handler no controller, com <code>@CurrentUser()</code> se precisar do usuário.</li>
+        <li><code>@Roles(...)</code> se exigir papel.</li>
+        <li>Filtre por <code>companyId</code> na consulta.</li>
+        <li>Registre auditoria se a ação for destrutiva ou sensível.</li>
+      </ol>
+
+      <h3>15.2 · Novo módulo</h3>
+      <pre><code>modules/&lt;nome&gt;/
+  domain/           tipos do negócio
+  application/      &lt;nome&gt;.service.ts
+  presentation/     &lt;nome&gt;.controller.ts + dto/
+  &lt;nome&gt;.module.ts</code></pre>
+      <p>
+        Registre em <code>src/app.module.ts</code>. Importe <code>PlansModule</code> se precisar das
+        asserções de limite e <code>AuditLogModule</code> se for auditar.
+      </p>
+
+      <h3>15.3 · Nova listagem paginada</h3>
+      <ol>
+        <li><code>PaginationQueryDto</code> (ou um DTO que o estenda) no <code>@Query()</code>.</li>
+        <li><code>parsePagination</code> no service.</li>
+        <li><code>$transaction([findMany, count])</code>.</li>
+        <li><code>buildPaginatedResult</code>.</li>
+        <li>No BFF do Next, <strong>repasse os query params</strong> — sem isso a paginação é ignorada em silêncio.</li>
+      </ol>
+
+      <h3>15.4 · Novo campo no banco</h3>
+      <ol>
+        <li>Edite <code>prisma/schema.prisma</code>.</li>
+        <li><code>npx prisma migrate dev --name &lt;descrição&gt;</code>.</li>
+        <li><code>npx prisma generate</code>.</li>
+        <li>Atualize DTO e tipos de domínio.</li>
+        <li>Se for exibido, alinhe com os tipos do front.</li>
+      </ol>
+
+      <h3>15.5 · Novo limite de plano</h3>
+      <ol>
+        <li>Campo em <code>Plan</code> no schema + migration.</li>
+        <li><code>assertCanX</code> em <code>PlanLimitsService</code>, com mensagem em português dizendo o limite e o caminho de saída.</li>
+        <li>Chame a asserção no service, <strong>antes</strong> de gravar.</li>
+        <li>Inclua no retorno de <code>getUsage</code> se o front for exibir.</li>
+      </ol>
+    </section>
+
+    <!-- 16 -->
+    <section class="sec" id="s16">
+      <div class="sec-head"><span class="sec-num">16</span><h2>Armadilhas e pendências</h2></div>
+
+      <h3>Armadilhas</h3>
+
+      <div class="trap">
+        <p><b>DTO sem decorators rejeita tudo.</b></p>
+        <p>Com <code>forbidNonWhitelisted: true</code>, uma propriedade sem decorator do class-validator gera <code>"property X should not exist"</code> e a requisição inteira falha com 400.</p>
+      </div>
+
+      <div class="trap">
+        <p><b><code>AuthenticatedUser</code> não tem <code>id</code>.</b></p>
+        <p>O campo é <code>userId</code>. Escrever <code>user.id</code> hoje não compila — e é assim de propósito.</p>
+      </div>
+
+      <div class="trap">
+        <p><b>Isolamento por empresa é manual.</b></p>
+        <p>Nenhum guard filtra por <code>companyId</code>. Toda consulta nova precisa do filtro no <code>where</code>.</p>
+      </div>
+
+      <div class="trap">
+        <p><b><code>MAX_PAGE_SIZE</code> é contrato.</b></p>
+        <p>O front pede <code>pageSize=2000</code> para carregar listas completas em selects e métricas. Reduzir esse teto trunca a interface dele.</p>
+      </div>
+
+      <div class="trap">
+        <p><b>Modelo e custo da IA andam juntos.</b></p>
+        <p>Trocar <code>OPENAI_RESUME_MODEL</code> sem trocar <code>COST_INPUT</code>/<code>COST_OUTPUT</code> faz o custo registrado ficar errado, sem nenhum sinal.</p>
+      </div>
+
+      <div class="trap">
+        <p><b>Env vence código.</b></p>
+        <p><code>COST_INPUT</code>, <code>COST_OUTPUT</code> e <code>USD_BRL</code> setados no ambiente sobrescrevem os defaults. Verifique o Railway antes de concluir que o código está errado.</p>
+      </div>
+
+      <div class="trap">
+        <p><b>Progresso do bulk é memória local.</b></p>
+        <p>Não sobrevive a restart nem funciona com mais de uma instância.</p>
+      </div>
+
+      <div class="trap">
+        <p><b><code>npm run lint</code> reescreve arquivos.</b></p>
+        <p>Roda com <code>--fix</code>. É o esperado — é assim que o Prettier é aplicado.</p>
+      </div>
+
+      <h3>Pendências abertas</h3>
+      <p>
+        Três coisas identificadas e <strong>deliberadamente não corrigidas</strong>, porque mudariam
+        comportamento ou dados:
+      </p>
+
+      <div class="pending">
+        <h4>1 · <code>POST /api/v1/resumes</code> está quebrado</h4>
+        <p>
+          <code>CreateResumeDto</code> não tem nenhum decorator do class-validator, então o
+          <code>ValidationPipe</code> rejeita todas as propriedades e a rota sempre responde 400. O front
+          não usa esse endpoint, por isso passou despercebido. Decida se ele deve ganhar validação ou ser
+          removido.
+        </p>
+      </div>
+
+      <div class="pending">
+        <h4>2 · <code>performedByName</code> é inconsistente na auditoria</h4>
+        <p>
+          Soft delete e download de currículo gravam o <strong>e-mail</strong> de quem fez; hard delete e
+          restore gravam o <strong>nome</strong>. Mesma coluna, e o front exibe ela direto. Corrigir muda
+          o que é gravado daqui pra frente e não reescreve o histórico.
+        </p>
+      </div>
+
+      <div class="pending">
+        <h4>3 · <code>npm run start:prod</code> aponta para o caminho errado</h4>
+        <p>
+          O script roda <code>node dist/main</code>, mas o build gera <code>dist/src/main.js</code> — o
+          <code>tsconfig.json</code> não tem <code>include</code>, então <code>prisma/</code> e
+          <code>generated/</code> entram na compilação e empurram o <code>rootDir</code> para a raiz do
+          projeto.
+        </p>
+        <p>
+          Não foi alterado porque, se o deploy já convive com esse layout, mudá-lo quebraria a produção.
+          Confirme como o Railway inicia a aplicação antes de mexer.
+        </p>
+      </div>
+
+      <h3>Melhoria sugerida, não aplicada</h3>
+      <div class="note">
+        <p>
+          Não há <code>@nestjs/config</code>: as variáveis de ambiente são lidas com
+          <code>process.env</code> espalhado por alguns arquivos, sem validação de schema no boot —
+          exceto <code>JWT_SECRET</code>, <code>DATABASE_URL</code> e <code>API_KEY</code>, que falham
+          cedo. Centralizar num <code>ConfigModule</code> tipado tornaria o boot mais previsível.
+        </p>
+      </div>
+    </section>
+
+    <!-- 17 -->
+    <section class="sec" id="s17">
+      <div class="sec-head"><span class="sec-num">17</span><h2>Antes de concluir</h2></div>
+
+      <p>Os quatro, limpos:</p>
+
+      <pre><code>npm run lint
+npx tsc --noEmit
+npm run build
+npm test</code></pre>
+
+      <p>Antes de abrir um PR:</p>
+
+      <ul class="checklist">
+        <li><span class="box"></span><span>Nenhum comentário novo em <code>src/</code></span></li>
+        <li><span class="box"></span><span>Nenhum <code>any</code> novo — <code>unknown</code> + estreitamento quando o valor for externo</span></li>
+        <li><span class="box"></span><span>Nenhum identificador em português; mensagens de erro <strong>em</strong> português</span></li>
+        <li><span class="box"></span><span>Handler novo usa <code>@CurrentUser()</code>, nunca <code>@Req() req: any</code></span></li>
+        <li><span class="box"></span><span>Consulta nova filtra por <code>companyId</code></span></li>
+        <li><span class="box"></span><span>Listagem nova usa <code>parsePagination</code> + <code>buildPaginatedResult</code></span></li>
+        <li><span class="box"></span><span>Ação destrutiva ou sensível registra auditoria</span></li>
+        <li><span class="box"></span><span>DTO novo tem decorators do class-validator em <strong>todas</strong> as propriedades</span></li>
+        <li><span class="box"></span><span>Se a rota mudou: o BFF do front foi ajustado junto</span></li>
+        <li><span class="box"></span><span>Se o comportamento do produto mudou: a documentação foi atualizada junto</span></li>
+      </ul>
+
+      <p class="foot">
+        Versão HTML de <code>docs/DOCUMENTATION.md</code>. Os dois descrevem o mesmo estado do código —
+        ao mudar um, mude o outro.
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+    var sections = links
+      .map(function (link) { return document.querySelector(link.getAttribute('href')); })
+      .filter(Boolean);
+
+    function setCurrent(id) {
+      links.forEach(function (link) {
+        if (link.getAttribute('href') === '#' + id) {
+          link.setAttribute('aria-current', 'true');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    }
+
+    if ('IntersectionObserver' in window && sections.length) {
+      var visible = new Map();
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            visible.set(entry.target.id, entry.intersectionRatio);
+          } else {
+            visible.delete(entry.target.id);
+          }
+        });
+
+        var top = null;
+        sections.forEach(function (section) {
+          if (visible.has(section.id) && top === null) {
+            top = section.id;
+          }
+        });
+
+        if (top) {
+          setCurrent(top);
+        }
+      }, { rootMargin: '-8% 0px -70% 0px', threshold: [0, 1] });
+
+      sections.forEach(function (section) { observer.observe(section); });
+      setCurrent(sections[0].id);
+    }
+
+    var filter = document.getElementById('filter');
+    var empty = document.getElementById('navEmpty');
+    var groups = Array.prototype.slice.call(document.querySelectorAll('[data-group]'));
+
+    if (filter) {
+      filter.addEventListener('input', function () {
+        var term = filter.value.trim().toLowerCase();
+        var matches = 0;
+
+        links.forEach(function (link) {
+          var hit = term === '' || link.textContent.toLowerCase().indexOf(term) !== -1;
+          link.classList.toggle('is-hidden', !hit);
+          if (hit) { matches += 1; }
+        });
+
+        groups.forEach(function (group) {
+          var list = group.nextElementSibling;
+          var anyVisible = list
+            ? Array.prototype.some.call(list.children, function (child) { return !child.classList.contains('is-hidden'); })
+            : false;
+          group.hidden = !anyVisible;
+        });
+
+        if (empty) { empty.hidden = matches !== 0; }
+      });
+    }
+
+    var toggle = document.getElementById('railToggle');
+    var body = document.getElementById('railBody');
+
+    function syncRail() {
+      if (!toggle || !body) { return; }
+      var isCompact = window.matchMedia('(max-width: 940px)').matches;
+
+      if (isCompact) {
+        body.hidden = toggle.getAttribute('aria-expanded') !== 'true';
+      } else {
+        body.hidden = false;
+      }
+    }
+
+    if (toggle && body) {
+      toggle.addEventListener('click', function () {
+        var open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!open));
+        toggle.textContent = !open ? 'Seções ▴' : 'Seções ▾';
+        syncRail();
+      });
+
+      links.forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (window.matchMedia('(max-width: 940px)').matches) {
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.textContent = 'Seções ▾';
+            syncRail();
+          }
+        });
+      });
+
+      window.addEventListener('resize', syncRail);
+      syncRail();
+    }
+  })();
+</script>

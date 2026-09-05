@@ -2,6 +2,11 @@
 
 Backend principal da plataforma **ORM Intelligence**, focada em análise inteligente de currículos com IA, matching de candidatos e recrutamento orientado por dados.
 
+**[docs/DOCUMENTATION.md](./docs/DOCUMENTATION.md) é a referência deste projeto**:
+regras de código, camadas, autenticação, paginação, mapa de endpoints e receitas.
+Leia as seções 1 a 4 antes de escrever código. Há uma versão navegável em
+[docs/DOCUMENTATION.html](./docs/DOCUMENTATION.html).
+
 Este projeto utiliza:
 
 - NestJS
